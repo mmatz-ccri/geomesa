@@ -27,18 +27,17 @@ import org.geotools.filter.identity.FeatureIdImpl
 import org.locationtech.geomesa.feature.serde.{ASFDeserializer, Version1Deserializer, Version2Deserializer}
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 
-
 class FeatureSpecificReader(oldType: SimpleFeatureType, newType: SimpleFeatureType)
   extends DatumReader[AvroSimpleFeature] {
 
   def this(sft: SimpleFeatureType) = this(sft, sft)
 
-  import org.locationtech.geomesa.feature.AvroSimpleFeature._
+  import org.locationtech.geomesa.feature.AvroSimpleFeatureWriter2._
 
 import scala.collection.JavaConversions._
 
-  var oldSchema = AvroSimpleFeature.generateSchema(oldType)
-  val newSchema = AvroSimpleFeature.generateSchema(newType)
+  var oldSchema = generateSchema(oldType)
+  val newSchema = generateSchema(newType)
   val fieldsDesired = DataUtilities.attributeNames(newType).map(encodeAttributeName)
 
   def isDataField(f: Schema.Field) =

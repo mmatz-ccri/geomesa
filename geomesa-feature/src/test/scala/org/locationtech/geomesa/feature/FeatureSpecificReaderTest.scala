@@ -5,7 +5,7 @@ import java.text.SimpleDateFormat
 import java.util.UUID
 
 import com.vividsolutions.jts.geom.{LineString, Point, Polygon}
-import org.apache.avro.io.DecoderFactory
+import org.apache.avro.io.{EncoderFactory, Encoder, DecoderFactory}
 import org.geotools.data.DataUtilities
 import org.geotools.filter.identity.FeatureIdImpl
 import org.junit.{Assert, Test}
@@ -36,7 +36,13 @@ class FeatureSpecificReaderTest {
     val f = File.createTempFile("avro", ".tmp")
     f.deleteOnExit()
     val fos = new FileOutputStream(f)
-    sfList.foreach( sf => sf.write(fos))
+    val writer = new AvroSimpleFeatureWriter2(sfList(0).getFeatureType)
+
+    val encoder = EncoderFactory.get().binaryEncoder(fos, null)
+    sfList.foreach { sf =>
+      writer.write(sf, encoder)
+    }
+    encoder.flush()
     fos.close()
     f
   }
