@@ -16,14 +16,9 @@
 
 package org.locationtech.geomesa.feature
 
-import java.util.concurrent.TimeUnit
 import java.util.{Collection => JCollection, List => JList}
 
-import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
-import com.google.common.collect.Maps
 import com.vividsolutions.jts.geom.Geometry
-import org.apache.commons.codec.binary.Hex
-import org.geotools.data.DataUtilities
 import org.geotools.feature.`type`.{AttributeDescriptorImpl, Types}
 import org.geotools.feature.{AttributeImpl, GeometryAttributeImpl}
 import org.geotools.geometry.jts.ReferencedEnvelope
@@ -42,36 +37,35 @@ class AvroSimpleFeature(id: FeatureId, sft: SimpleFeatureType)
   extends SimpleFeature
   with Serializable {
 
-  import org.locationtech.geomesa.feature.AvroSimpleFeature._
-
-  val values  = Array.ofDim[AnyRef](sft.getAttributeCount)
+  val values = Array.ofDim[AnyRef](sft.getAttributeCount)
   @transient lazy val userData  = collection.mutable.HashMap.empty[AnyRef, AnyRef]
-  @transient lazy val nameIndex = nameIndexCache.get(sft)
 
   def getFeatureType = sft
   def getType = sft
   def getIdentifier = id
   def getID = id.getID
 
-  def getAttribute(name: String) = nameIndex.get(name).map(getAttribute).orNull
+  def getAttribute(name: String) = if (sft.indexOf(name) >= 0) getAttribute(sft.indexOf(name)) else null
   def getAttribute(name: Name) = getAttribute(name.getLocalPart)
   def getAttribute(index: Int) = values(index)
 
-  def setAttribute(name: String, value: Object) = setAttribute(nameIndex(name), value)
+  def setAttribute(name: String, value: Object) = setAttribute(sft.indexOf(name), value)
   def setAttribute(name: Name, value: Object) = setAttribute(name.getLocalPart, value)
-  def setAttribute(index: Int, value: Object) = setAttributeNoConvert(index, Converters.convert(value, getFeatureType.getDescriptor(index).getType.getBinding).asInstanceOf[AnyRef])
+  def setAttribute(index: Int, value: Object) = setAttributeNoConvert(index,
+    Converters.convert(value, getFeatureType.getDescriptor(index).getType.getBinding).asInstanceOf[AnyRef])
+
   def setAttributes(vals: JList[Object]) = vals.zipWithIndex.foreach { case (v, idx) => setAttribute(idx, v) }
   def setAttributes(vals: Array[Object])= vals.zipWithIndex.foreach { case (v, idx) => setAttribute(idx, v) }
 
   def setAttributeNoConvert(index: Int, value: Object) = values(index) = value
-  def setAttributeNoConvert(name: String, value: Object): Unit = setAttributeNoConvert(nameIndex(name), value)
+  def setAttributeNoConvert(name: String, value: Object): Unit = setAttributeNoConvert(sft.indexOf(name), value)
   def setAttributeNoConvert(name: Name, value: Object): Unit = setAttributeNoConvert(name.getLocalPart, value)
   def setAttributesNoConvert(vals: JList[Object]) = vals.zipWithIndex.foreach { case (v, idx) => values(idx) = v }
   def setAttributesNoConvert(vals: Array[Object])= vals.zipWithIndex.foreach { case (v, idx) => values(idx) = v }
 
   def getAttributeCount = values.length
   def getAttributes: JList[Object] = values.toList
-  def getDefaultGeometry: Object = Try(sft.getGeometryDescriptor.getName).map { getAttribute }.getOrElse(null)
+  def getDefaultGeometry: Object = Try(sft.getGeometryDescriptor.getName).map(getAttribute).getOrElse(null)
 
   def setDefaultGeometry(geo: Object) = setAttribute(sft.getGeometryDescriptor.getName, geo)
 
@@ -116,7 +110,7 @@ class AvroSimpleFeature(id: FeatureId, sft: SimpleFeatureType)
   def getValue: JCollection[_ <: Property] = getProperties
 
   def setValue(values: JCollection[Property]) = values.zipWithIndex.foreach { case (p, idx) =>
-    this.values(idx) = p.getValue}
+    this.values(idx) = p.getValue }
 
   def getDescriptor: AttributeDescriptor = new AttributeDescriptorImpl(sft, sft.getName, 0, Int.MaxValue, true, null)
 
@@ -129,37 +123,5 @@ class AvroSimpleFeature(id: FeatureId, sft: SimpleFeatureType)
   def setValue(newValue: Object) = setValue (newValue.asInstanceOf[JCollection[Property]])
 
   def validate() = values.zipWithIndex.foreach { case (v, idx) => Types.validate(getType.getDescriptor(idx), v) }
-
-}
-
-object AvroSimpleFeature {
-
-  import scala.collection.JavaConversions._
-
-  def loadingCacheBuilder[V <: AnyRef](f: SimpleFeatureType => V) =
-    CacheBuilder
-      .newBuilder
-      .maximumSize(100)
-      .expireAfterWrite(10, TimeUnit.MINUTES)
-      .build(
-        new CacheLoader[SimpleFeatureType, V] {
-          def load(sft: SimpleFeatureType): V = f(sft)
-        }
-      )
-
-  val nameIndexCache: LoadingCache[SimpleFeatureType, Map[String, Int]] =
-    loadingCacheBuilder { sft =>
-      DataUtilities.attributeNames(sft).map { name => (name, sft.indexOf(name))}.toMap
-    }
-
-  val attributeNameLookUp = Maps.newConcurrentMap[String, String]()
-
-  def encode(s: String): String = "_" + Hex.encodeHexString(s.getBytes("UTF8"))
-
-  def decode(s: String): String = new String(Hex.decodeHex(s.substring(1).toCharArray), "UTF8")
-
-  def encodeAttributeName(s: String): String = attributeNameLookUp.getOrElseUpdate(s, encode(s))
-
-  def decodeAttributeName(s: String): String = attributeNameLookUp.getOrElseUpdate(s, decode(s))
 
 }

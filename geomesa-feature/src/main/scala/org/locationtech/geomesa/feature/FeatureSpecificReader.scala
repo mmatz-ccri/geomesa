@@ -24,17 +24,16 @@ import org.apache.avro.Schema
 import org.apache.avro.io.{BinaryDecoder, DatumReader, Decoder, DecoderFactory}
 import org.geotools.data.DataUtilities
 import org.geotools.filter.identity.FeatureIdImpl
+import org.locationtech.geomesa.feature.AvroSimpleFeatureUtils._
 import org.locationtech.geomesa.feature.serde.{ASFDeserializer, Version1Deserializer, Version2Deserializer}
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
+
+import scala.collection.JavaConversions._
 
 class FeatureSpecificReader(oldType: SimpleFeatureType, newType: SimpleFeatureType)
   extends DatumReader[AvroSimpleFeature] {
 
   def this(sft: SimpleFeatureType) = this(sft, sft)
-
-  import org.locationtech.geomesa.feature.AvroSimpleFeatureWriter._
-
-import scala.collection.JavaConversions._
 
   var oldSchema = generateSchema(oldType)
   val newSchema = generateSchema(newType)
@@ -117,7 +116,7 @@ import scala.collection.JavaConversions._
 object FeatureSpecificReader {
 
   // use when you want the entire feature back, not a subset
-  def apply(sftType: SimpleFeatureType) = new FeatureSpecificReader(sftType, sftType)
+  def apply(sftType: SimpleFeatureType) = new FeatureSpecificReader(sftType)
 
   // first field is serialization version, 2nd field is ID of simple feature
   def extractId(is: InputStream, reuse: BinaryDecoder = null): String = {
