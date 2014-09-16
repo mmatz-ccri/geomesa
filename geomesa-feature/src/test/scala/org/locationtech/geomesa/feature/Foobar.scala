@@ -4,8 +4,7 @@ import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.UUID
 
-import com.vividsolutions.jts.geom.{Polygon, Point}
-import org.apache.avro.io.EncoderFactory
+import com.vividsolutions.jts.geom.{Point, Polygon}
 import org.geotools.filter.identity.FeatureIdImpl
 import org.locationtech.geomesa.utils.geohash.GeohashUtils
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
@@ -55,11 +54,8 @@ object Foobar {
 
     def two() = {
       val afw = new AvroSimpleFeatureWriter(features(0).getType)
-      val newBaos = new ByteArrayOutputStream()
       features.foreach { f =>
-        newBaos.reset()
-        val encoder = EncoderFactory.get().directBinaryEncoder(newBaos, null)
-        afw.write(f, encoder)
+        afw.encode(f)
       }
     }
 

@@ -16,14 +16,13 @@
 
 package org.locationtech.geomesa.core.data
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream}
+import java.io.{ByteArrayInputStream, InputStream}
 
-import com.google.common.cache.LoadingCache
 import org.apache.accumulo.core.data.{Value => AValue}
-import org.apache.avro.io.{EncoderFactory, DecoderFactory}
+import org.apache.avro.io.{BinaryDecoder, DecoderFactory}
 import org.geotools.data.DataUtilities
 import org.locationtech.geomesa.core.data.FeatureEncoding.FeatureEncoding
-import org.locationtech.geomesa.feature.{AvroSimpleFeatureWriter, AvroSimpleFeature, FeatureSpecificReader}
+import org.locationtech.geomesa.feature.{AvroSimpleFeatureWriter, FeatureSpecificReader}
 import org.locationtech.geomesa.utils.text.ObjectPoolFactory
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 
@@ -85,22 +84,31 @@ object ThreadSafeDataUtilities {
     }
 }
 
-// TODO the AvroFeatureEncoder may not be threadsafe...evaluate.
+/**
+ * Encode features as avro making reuse of binary decoders and encoders
+ * as well as a custom datum writer and reader
+ *
+ * This class is NOT threadsafe and cannot be across multiple threads.
+ *
+ * @param sft
+ */
 class AvroFeatureEncoder(sft: SimpleFeatureType) extends SimpleFeatureEncoder {
 
   private val writer = new AvroSimpleFeatureWriter(sft)
   private val reader = FeatureSpecificReader(sft)
+  private var decoder: BinaryDecoder = null
 
   def encode(feature: SimpleFeature): Array[Byte] = writer.encode(feature)
 
   def decode(featureAValue: AValue) = decode(new ByteArrayInputStream(featureAValue.get()))
 
   def decode(is: InputStream) = {
-    val decoder = DecoderFactory.get().binaryDecoder(is, null)
+    decoder = DecoderFactory.get().binaryDecoder(is, decoder)
     reader.read(null, decoder)
   }
 
-  def extractFeatureId(aValue: AValue) = FeatureSpecificReader.extractId(new ByteArrayInputStream(aValue.get()))
+  def extractFeatureId(aValue: AValue) =
+    FeatureSpecificReader.extractId(new ByteArrayInputStream(aValue.get()), decoder)
 
   override def getEncoding: FeatureEncoding = FeatureEncoding.AVRO
 }

@@ -21,7 +21,7 @@ import java.util.{Date, UUID}
 
 import com.vividsolutions.jts.geom.Geometry
 import org.apache.avro.Schema
-import org.apache.avro.io.{DatumReader, Decoder, DecoderFactory}
+import org.apache.avro.io.{BinaryDecoder, DatumReader, Decoder, DecoderFactory}
 import org.geotools.data.DataUtilities
 import org.geotools.filter.identity.FeatureIdImpl
 import org.locationtech.geomesa.feature.serde.{ASFDeserializer, Version1Deserializer, Version2Deserializer}
@@ -120,8 +120,8 @@ object FeatureSpecificReader {
   def apply(sftType: SimpleFeatureType) = new FeatureSpecificReader(sftType, sftType)
 
   // first field is serialization version, 2nd field is ID of simple feature
-  def extractId(is: InputStream): String = {
-    val decoder = DecoderFactory.get().binaryDecoder(is, null)
+  def extractId(is: InputStream, reuse: BinaryDecoder = null): String = {
+    val decoder = DecoderFactory.get().binaryDecoder(is, reuse)
     decoder.readInt()
     decoder.readString()
   }

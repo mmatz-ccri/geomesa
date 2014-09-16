@@ -1,23 +1,38 @@
+/*
+ * Copyright 2014 Commonwealth Computer Research, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.locationtech.geomesa.feature
 
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.util.{Date, UUID}
 
-import com.google.common.collect.Maps
 import com.vividsolutions.jts.geom.Geometry
 import org.apache.avro.Schema.Field
-import org.apache.avro.{SchemaBuilder, Schema}
-import org.apache.avro.generic.GenericDatumWriter
-import org.apache.avro.io.{EncoderFactory, Encoder, DatumWriter}
+import org.apache.avro.Schema.Type._
+import org.apache.avro.io.{BinaryEncoder, DatumWriter, Encoder, EncoderFactory}
+import org.apache.avro.{Schema, SchemaBuilder}
 import org.apache.commons.codec.binary.Hex
 import org.geotools.data.DataUtilities
 import org.geotools.util.Converters
+import org.locationtech.geomesa.feature.AvroSimpleFeatureWriter._
 import org.locationtech.geomesa.utils.text.WKBUtils
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
-import org.apache.avro.Schema.Type._
+
 import scala.collection.JavaConversions._
-import AvroSimpleFeatureWriter._
 
 class AvroSimpleFeatureWriter(sft: SimpleFeatureType)
   extends DatumWriter[SimpleFeature] {
@@ -29,9 +44,15 @@ class AvroSimpleFeatureWriter(sft: SimpleFeatureType)
   override def setSchema(s: Schema): Unit = schema = s
 
   private val baos = new ByteArrayOutputStream()
+  private var encoder: BinaryEncoder = null
+
+  /**
+   * Convenience method to encode an SF as a byte array. Creates a
+   * binary encoder for you to serialize the feature.
+   */
   def encode(sf: SimpleFeature): Array[Byte] = {
     baos.reset()
-    val encoder = EncoderFactory.get().directBinaryEncoder(baos, null)
+    encoder = EncoderFactory.get().directBinaryEncoder(baos, encoder)
     write(sf, encoder)
     encoder.flush()
     baos.toByteArray
