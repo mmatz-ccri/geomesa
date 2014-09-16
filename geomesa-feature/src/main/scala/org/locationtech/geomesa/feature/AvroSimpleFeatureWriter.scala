@@ -17,14 +17,16 @@ import org.locationtech.geomesa.utils.text.WKBUtils
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 import org.apache.avro.Schema.Type._
 import scala.collection.JavaConversions._
-import AvroSimpleFeatureWriter2._
+import AvroSimpleFeatureWriter._
 
-class AvroSimpleFeatureWriter2(sft: SimpleFeatureType)
+class AvroSimpleFeatureWriter(sft: SimpleFeatureType)
   extends DatumWriter[SimpleFeature] {
 
-  private val schema: Schema = generateSchema(sft)
+  private var schema: Schema = generateSchema(sft)
+  val typeMap = createTypeMap(sft)
+  val names = DataUtilities.attributeNames(sft).map(encodeAttributeName)
 
-  override def setSchema(s: Schema): Unit = {}
+  override def setSchema(s: Schema): Unit = schema = s
 
   private val baos = new ByteArrayOutputStream()
   def encode(sf: SimpleFeature): Array[Byte] = {
@@ -68,16 +70,19 @@ class AvroSimpleFeatureWriter2(sft: SimpleFeatureType)
     out.writeInt(VERSION)
     out.writeString(datum.getID)
 
-    schema.getFields.drop(2).foreach { f => write(f.schema(), f) }
-  }
+    var i = 2
 
-  val typeMap = createTypeMap(sft)
-  val names = DataUtilities.attributeNames(sft).map(encodeAttributeName)
+    while(i < schema.getFields.length) {
+      val f = schema.getFields.get(i)
+      write(f.schema(), f)
+      i += 1
+    }
+  }
 
   def convertValue(idx: Int, v: AnyRef) = typeMap(names(idx)).conv.apply(v)
 }
 
-object AvroSimpleFeatureWriter2 {
+object AvroSimpleFeatureWriter {
 
   final val FEATURE_ID_AVRO_FIELD_NAME: String = "__fid__"
   final val AVRO_SIMPLE_FEATURE_VERSION: String = "__version__"

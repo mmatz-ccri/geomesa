@@ -36,7 +36,7 @@ class FeatureSpecificReaderTest {
     val f = File.createTempFile("avro", ".tmp")
     f.deleteOnExit()
     val fos = new FileOutputStream(f)
-    val writer = new AvroSimpleFeatureWriter2(sfList(0).getFeatureType)
+    val writer = new AvroSimpleFeatureWriter(sfList(0).getFeatureType)
 
     val encoder = EncoderFactory.get().binaryEncoder(fos, null)
     sfList.foreach { sf =>

@@ -23,7 +23,7 @@ import org.apache.accumulo.core.data.{Value => AValue}
 import org.apache.avro.io.{EncoderFactory, DecoderFactory}
 import org.geotools.data.DataUtilities
 import org.locationtech.geomesa.core.data.FeatureEncoding.FeatureEncoding
-import org.locationtech.geomesa.feature.{AvroSimpleFeatureWriter2, AvroSimpleFeature, FeatureSpecificReader}
+import org.locationtech.geomesa.feature.{AvroSimpleFeatureWriter, AvroSimpleFeature, FeatureSpecificReader}
 import org.locationtech.geomesa.utils.text.ObjectPoolFactory
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 
@@ -88,7 +88,7 @@ object ThreadSafeDataUtilities {
 // TODO the AvroFeatureEncoder may not be threadsafe...evaluate.
 class AvroFeatureEncoder(sft: SimpleFeatureType) extends SimpleFeatureEncoder {
 
-  private val writer = new AvroSimpleFeatureWriter2(sft)
+  private val writer = new AvroSimpleFeatureWriter(sft)
   private val reader = FeatureSpecificReader(sft)
 
   def encode(feature: SimpleFeature): Array[Byte] = writer.encode(feature)

@@ -32,7 +32,7 @@ class FeatureSpecificReader(oldType: SimpleFeatureType, newType: SimpleFeatureTy
 
   def this(sft: SimpleFeatureType) = this(sft, sft)
 
-  import org.locationtech.geomesa.feature.AvroSimpleFeatureWriter2._
+  import org.locationtech.geomesa.feature.AvroSimpleFeatureWriter._
 
 import scala.collection.JavaConversions._
 

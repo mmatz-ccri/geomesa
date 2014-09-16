@@ -4,7 +4,7 @@ import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.UUID
 
-import com.vividsolutions.jts.geom.{Polygon, Point, Geometry}
+import com.vividsolutions.jts.geom.{Point, Polygon}
 import org.apache.avro.io.EncoderFactory
 import org.geotools.filter.identity.FeatureIdImpl
 import org.junit.runner.RunWith
@@ -17,18 +17,18 @@ import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
 @RunWith(classOf[JUnitRunner])
-class AvroSimpleFeatureWriter2Test extends Specification {
-  def createComplicatedFeatures(numFeatures : Int) : List[AvroSimpleFeature] = {
+class AvroSimpleFeatureWriterTest extends Specification {
+  def createComplicatedFeatures(numFeatures : Int) : List[Version2ASF] = {
     val geoSchema = "f0:String,f1:Integer,f2:Double,f3:Float,f4:Boolean,f5:UUID,f6:Date,f7:Point:srid=4326,f8:Polygon:srid=4326"
     val sft = SimpleFeatureTypes.createType("test", geoSchema)
     val r = new Random()
     r.setSeed(0)
 
 
-    val list = new ListBuffer[AvroSimpleFeature]
+    val list = new ListBuffer[Version2ASF]
     for(i <- 0 until numFeatures){
       val fid = new FeatureIdImpl(r.nextString(5))
-      val sf = new AvroSimpleFeature(fid, sft)
+      val sf = new Version2ASF(fid, sft)
 
       sf.setAttribute("f0", r.nextString(10).asInstanceOf[Object])
       sf.setAttribute("f1", r.nextInt().asInstanceOf[Object])
@@ -55,44 +55,17 @@ class AvroSimpleFeatureWriter2Test extends Specification {
       f.setAttribute(2,"POINT(45.0 49.0)")
 
       val oldBaos = new ByteArrayOutputStream()
-      val oldbytes = Version1ASF(f).write(oldBaos)
+      val oldbytes = Version2ASF(f).write(oldBaos)
 
-      val afw = new AvroSimpleFeatureWriter2(sft)
+      val afw = new AvroSimpleFeatureWriter(sft)
       val newBaos = new ByteArrayOutputStream()
       val encoder = EncoderFactory.get().directBinaryEncoder(newBaos, null)
       afw.write(f, encoder)
+      encoder.flush()
 
-      println(oldBaos.size())
-      println(newBaos.size())
-
-      success
-
+      oldBaos.toByteArray mustEqual newBaos.toByteArray
     }
 
-    "be faster" in {
-      val features = createComplicatedFeatures(10000)
-
-      val start = System.currentTimeMillis()
-      val oldBaos = new ByteArrayOutputStream()
-      features.foreach { f =>
-        oldBaos.reset()
-        Version1ASF(f).write(oldBaos)
-      }
-      println(System.currentTimeMillis() - start)
-
-
-      val start2 = System.currentTimeMillis()
-      val afw = new AvroSimpleFeatureWriter2(features(0).getType)
-      val newBaos = new ByteArrayOutputStream()
-      features.foreach { f =>
-        newBaos.reset()
-        val encoder = EncoderFactory.get().directBinaryEncoder(newBaos, null)
-        afw.write(f, encoder)
-      }
-      println(System.currentTimeMillis() - start2)
-
-      success
-    }
   }
 
 }
