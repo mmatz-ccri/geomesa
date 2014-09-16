@@ -16,24 +16,18 @@
 
 package org.locationtech.geomesa.feature
 
-import java.io.OutputStream
-import java.nio._
 import java.util.concurrent.TimeUnit
-import java.util.{Date, UUID, Collection => JCollection, List => JList}
+import java.util.{Collection => JCollection, List => JList}
 
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import com.google.common.collect.Maps
 import com.vividsolutions.jts.geom.Geometry
-import org.apache.avro.generic.{GenericData, GenericDatumWriter, GenericRecord}
-import org.apache.avro.io.{BinaryEncoder, EncoderFactory}
-import org.apache.avro.{Schema, SchemaBuilder}
 import org.apache.commons.codec.binary.Hex
 import org.geotools.data.DataUtilities
 import org.geotools.feature.`type`.{AttributeDescriptorImpl, Types}
 import org.geotools.feature.{AttributeImpl, GeometryAttributeImpl}
 import org.geotools.geometry.jts.ReferencedEnvelope
 import org.geotools.util.Converters
-import org.locationtech.geomesa.utils.text.WKBUtils
 import org.opengis.feature.`type`.{AttributeDescriptor, Name}
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 import org.opengis.feature.{GeometryAttribute, Property}
@@ -152,9 +146,6 @@ object AvroSimpleFeature {
           def load(sft: SimpleFeatureType): V = f(sft)
         }
       )
-
-  val nameCache: LoadingCache[SimpleFeatureType, Array[String]] =
-    loadingCacheBuilder { sft => DataUtilities.attributeNames(sft).map(encodeAttributeName) }
 
   val nameIndexCache: LoadingCache[SimpleFeatureType, Map[String, Int]] =
     loadingCacheBuilder { sft =>
