@@ -59,7 +59,7 @@ object Foobar {
       list.toList
     }
 
-    val features = createComplicatedFeatures(1000000)
+    val features = createComplicatedFeatures(20000)
 
     def one() = {
       val oldBaos = new ByteArrayOutputStream()
@@ -94,9 +94,8 @@ object Foobar {
     one
     two
 
-    val twos = time(10, two)
-    val ones = time(10, one)
-
+    val twos = time(100, two)
+    val ones = time(100, one)
 
     println("1: " + ones)
     println("2: " + twos)

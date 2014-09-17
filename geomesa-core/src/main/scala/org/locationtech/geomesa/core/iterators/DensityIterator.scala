@@ -80,6 +80,7 @@ class DensityIterator(other: DensityIterator, env: IteratorEnvironment) extends 
     simpleFeatureType.decodeUserData(options, GEOMESA_ITERATORS_SIMPLE_FEATURE_TYPE)
 
     // default to text if not found for backwards compatibility
+    // This encoder is for the original sft not the density projected sft
     val encodingOpt = Option(options.get(FEATURE_ENCODING)).getOrElse(FeatureEncoding.TEXT.toString)
     originalEncoder = SimpleFeatureEncoderFactory.createEncoder(simpleFeatureType, encodingOpt)
 
@@ -87,6 +88,8 @@ class DensityIterator(other: DensityIterator, env: IteratorEnvironment) extends 
     val (w, h) = DensityIterator.getBounds(options)
     snap = new GridSnap(bbox, w, h)
     projectedSFT = SimpleFeatureTypes.createType(simpleFeatureType.getTypeName, DENSITY_FEATURE_STRING)
+
+    // Use a new encoder for the projected SFT since the spec is different
     projectedEncoder = SimpleFeatureEncoderFactory.createEncoder(projectedSFT, encodingOpt)
     featureBuilder = AvroSimpleFeatureFactory.featureBuilder(projectedSFT)
     val schemaEncoding = options.get(DEFAULT_SCHEMA_NAME)

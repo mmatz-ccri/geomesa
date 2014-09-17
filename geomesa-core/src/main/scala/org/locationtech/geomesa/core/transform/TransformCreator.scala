@@ -10,6 +10,13 @@ import scala.collection.JavaConversions._
 
 object TransformCreator {
 
+  /**
+   * Create a function to transform a feature from one sft to another...this will
+   * result in a new feature instance being created and encoded.
+   *
+   * The function returned may NOT be ThreadSafe to due the fact it contains a
+   * SimpleFeatureEncoder instance which is not thread safe to optimize performance
+   */
   def createTransform(targetFeatureType: SimpleFeatureType,
                       featureEncoding: FeatureEncoding,
                       transformString: String): (SimpleFeature => Array[Byte]) =

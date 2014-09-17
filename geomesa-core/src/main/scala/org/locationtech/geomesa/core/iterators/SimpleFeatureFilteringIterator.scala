@@ -85,6 +85,7 @@ class SimpleFeatureFilteringIterator(other: SimpleFeatureFilteringIterator, env:
     simpleFeatureType.decodeUserData(options, GEOMESA_ITERATORS_SIMPLE_FEATURE_TYPE)
 
     // default to text if not found for backwards compatibility
+    // this encoder is for the source sft not the transformed sft (may be different)
     val encodingOpt = Option(options.get(FEATURE_ENCODING)).getOrElse(FeatureEncoding.TEXT.toString)
     sourceEncoder = SimpleFeatureEncoderFactory.createEncoder(simpleFeatureType, encodingOpt)
 
