@@ -44,6 +44,11 @@ import scala.collection.JavaConversions._
 import scala.util.Try
 
 
+/*
+ * TODO: OLD CLASS KEPT AROUND FOR TESTING the WRITE method and speed...
+ *
+ * TODO: Should be removed after stable 1.0.0 release and AvroSimpleFeatureWriter is known to work OK
+ */
 class Version2ASF(id: FeatureId, sft: SimpleFeatureType)
   extends SimpleFeature
   with Serializable {
