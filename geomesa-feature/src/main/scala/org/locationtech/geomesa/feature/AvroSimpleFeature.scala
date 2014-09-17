@@ -110,7 +110,8 @@ class AvroSimpleFeature(id: FeatureId, sft: SimpleFeatureType)
   def getValue: JCollection[_ <: Property] = getProperties
 
   def setValue(values: JCollection[Property]) = values.zipWithIndex.foreach { case (p, idx) =>
-    this.values(idx) = p.getValue }
+    this.values(idx) = p.getValue
+  }
 
   def getDescriptor: AttributeDescriptor = new AttributeDescriptorImpl(sft, sft.getName, 0, Int.MaxValue, true, null)
 
