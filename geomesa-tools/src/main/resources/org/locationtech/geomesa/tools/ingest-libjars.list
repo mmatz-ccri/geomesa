@@ -1,1 +1,6 @@
-\n
+geomesa
+accumulo-core
+accumulo-fate
+accumulo-start
+accumulo-trace
+libthrift
