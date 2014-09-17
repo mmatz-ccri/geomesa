@@ -34,25 +34,13 @@ class AvroSimpleFeatureWriter(sft: SimpleFeatureType)
   extends DatumWriter[SimpleFeature] {
 
   private var schema: Schema = generateSchema(sft)
-  val typeMap = createTypeMap(sft, new WKBWriter())
-  val names = DataUtilities.attributeNames(sft).map(encodeAttributeName)
+  private val typeMap = createTypeMap(sft, new WKBWriter())
+  private val names = DataUtilities.attributeNames(sft).map(encodeAttributeName)
 
   override def setSchema(s: Schema): Unit = schema = s
 
   private val baos = new ByteArrayOutputStream()
   private var encoder: BinaryEncoder = null
-
-  /**
-   * Convenience method to encode an SF as a byte array. Creates a
-   * binary encoder for you to serialize the feature.
-   */
-  def encode(sf: SimpleFeature): Array[Byte] = {
-    baos.reset()
-    encoder = EncoderFactory.get().directBinaryEncoder(baos, encoder)
-    write(sf, encoder)
-    encoder.flush()
-    baos.toByteArray
-  }
 
   override def write(datum: SimpleFeature, out: Encoder): Unit = {
 
@@ -95,5 +83,5 @@ class AvroSimpleFeatureWriter(sft: SimpleFeatureType)
     }
   }
 
-  def convertValue(idx: Int, v: AnyRef) = typeMap(names(idx)).conv.apply(v)
+  private def convertValue(idx: Int, v: AnyRef) = typeMap(names(idx)).conv.apply(v)
 }

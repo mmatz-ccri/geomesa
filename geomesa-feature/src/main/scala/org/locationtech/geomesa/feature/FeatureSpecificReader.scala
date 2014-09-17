@@ -120,7 +120,7 @@ object FeatureSpecificReader {
 
   // first field is serialization version, 2nd field is ID of simple feature
   def extractId(is: InputStream, reuse: BinaryDecoder = null): String = {
-    val decoder = DecoderFactory.get().binaryDecoder(is, reuse)
+    val decoder = DecoderFactory.get().directBinaryDecoder(is, reuse)
     decoder.readInt()
     decoder.readString()
   }

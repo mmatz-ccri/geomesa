@@ -16,10 +16,10 @@
 
 package org.locationtech.geomesa.core.data
 
-import java.io.{ByteArrayInputStream, InputStream}
+import java.io.{ByteArrayOutputStream, ByteArrayInputStream, InputStream}
 
 import org.apache.accumulo.core.data.{Value => AValue}
-import org.apache.avro.io.{BinaryDecoder, DecoderFactory}
+import org.apache.avro.io._
 import org.geotools.data.DataUtilities
 import org.locationtech.geomesa.core.data.FeatureEncoding.FeatureEncoding
 import org.locationtech.geomesa.feature.{AvroSimpleFeatureWriter, FeatureSpecificReader}
@@ -33,10 +33,10 @@ import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
  *
  * All encoding/decoding/serializing of features should be done through this
  * single class to allow future versions of serialization instead of scattering
- * knowledge of how the serialization is done through the org.locationtech.geomesa.core
- * codebase
+ * knowledge of how the serialization is done through geomesa codebase.
  *
- * A SimpleFeatureEncoder is bound to a given SimpleFeatureType at creation time.
+ * A SimpleFeatureEncoder is bound to a given SimpleFeatureType since serialization
+ * may depend upon the schema of the feature type.
  *
  * SimpleFeatureEncoder classes may not be thread safe and should generally be used
  * as instance variables for performance reasons. They can serialize and deserialize
@@ -52,8 +52,8 @@ trait SimpleFeatureEncoder {
 
 object FeatureEncoding extends Enumeration {
   type FeatureEncoding = Value
-  val AVRO = Value("avro").asInstanceOf[FeatureEncoding]
-  val TEXT = Value("text").asInstanceOf[FeatureEncoding]
+  val AVRO = Value("avro")
+  val TEXT = Value("text")
 }
 
 class TextFeatureEncoder(sft: SimpleFeatureType) extends SimpleFeatureEncoder{
@@ -102,19 +102,31 @@ class AvroFeatureEncoder(sft: SimpleFeatureType) extends SimpleFeatureEncoder {
 
   private val writer = new AvroSimpleFeatureWriter(sft)
   private val reader = FeatureSpecificReader(sft)
-  private var decoder: BinaryDecoder = null
 
-  def encode(feature: SimpleFeature): Array[Byte] = writer.encode(feature)
+  // Encode using a direct binary encoder that is reused. No need to buffer
+  // small simple features. Reuse a common BAOS as well.
+  private val baos = new ByteArrayOutputStream()
+  private var reusableEncoder: DirectBinaryEncoder = null
+  def encode(feature: SimpleFeature): Array[Byte] = {
+    baos.reset()
+    reusableEncoder = EncoderFactory.get().directBinaryEncoder(baos, reusableEncoder).asInstanceOf[DirectBinaryEncoder]
+    writer.write(feature, reusableEncoder)
+    reusableEncoder.flush()
+    baos.toByteArray
+  }
 
   def decode(featureAValue: AValue) = decode(new ByteArrayInputStream(featureAValue.get()))
 
+  // Use a direct binary encoder that is reused. No need to buffer simple features
+  // since they are small and no stream read-ahead is required
+  private var reusableDecoder: BinaryDecoder = null
   def decode(is: InputStream) = {
-    decoder = DecoderFactory.get().binaryDecoder(is, decoder)
-    reader.read(null, decoder)
+    reusableDecoder = DecoderFactory.get().directBinaryDecoder(is, reusableDecoder)
+    reader.read(null, reusableDecoder)
   }
 
   def extractFeatureId(aValue: AValue) =
-    FeatureSpecificReader.extractId(new ByteArrayInputStream(aValue.get()), decoder)
+    FeatureSpecificReader.extractId(new ByteArrayInputStream(aValue.get()), reusableDecoder)
 
   override def getEncoding: FeatureEncoding = FeatureEncoding.AVRO
 }
