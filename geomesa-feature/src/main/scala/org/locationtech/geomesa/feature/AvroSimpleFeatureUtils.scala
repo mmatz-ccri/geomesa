@@ -33,6 +33,8 @@ object AvroSimpleFeatureUtils {
 
   final val FEATURE_ID_AVRO_FIELD_NAME: String = "__fid__"
   final val AVRO_SIMPLE_FEATURE_VERSION: String = "__version__"
+
+  // Increment whenever encoding changes and handle in reader and writer
   final val VERSION: Int = 2
   final val AVRO_NAMESPACE: String = "org.geomesa"
 
@@ -97,6 +99,8 @@ object AvroSimpleFeatureUtils {
 
   case class Binding(clazz: Class[_], conv: AnyRef => Any)
 
+  // Resulting functions in map are not thread-safe...use only as
+  // member variable, not in a static context
   def createTypeMap(sft: SimpleFeatureType, wkbWriter: WKBWriter) = {
     sft.getAttributeDescriptors.map { ad =>
       val conv =

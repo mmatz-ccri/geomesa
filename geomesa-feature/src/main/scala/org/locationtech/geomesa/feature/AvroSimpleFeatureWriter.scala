@@ -39,9 +39,6 @@ class AvroSimpleFeatureWriter(sft: SimpleFeatureType)
 
   override def setSchema(s: Schema): Unit = schema = s
 
-  private val baos = new ByteArrayOutputStream()
-  private var encoder: BinaryEncoder = null
-
   override def write(datum: SimpleFeature, out: Encoder): Unit = {
 
     def rawField(field: Field) = datum.getAttribute(field.pos - 2)
@@ -74,7 +71,7 @@ class AvroSimpleFeatureWriter(sft: SimpleFeatureType)
     out.writeInt(VERSION)
     out.writeString(datum.getID)
 
-    // optimized for speed - write out fields
+    // Write out fields from Simple Feature
     var i = 2
     while(i < schema.getFields.length) {
       val f = schema.getFields.get(i)
