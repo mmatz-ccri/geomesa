@@ -33,9 +33,15 @@ import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
  *
  * All encoding/decoding/serializing of features should be done through this
  * single class to allow future versions of serialization instead of scattering
- * knowledge of how the serialization is done through the org.locationtech.geomesa.core codebase
+ * knowledge of how the serialization is done through the org.locationtech.geomesa.core
+ * codebase
+ *
+ * A SimpleFeatureEncoder is bound to a given SimpleFeatureType at creation time.
+ *
+ * SimpleFeatureEncoder classes may not be thread safe and should generally be used
+ * as instance variables for performance reasons. They can serialize and deserialize
+ * multiple features.
  */
-
 trait SimpleFeatureEncoder {
   def encode(feature: SimpleFeature) : Array[Byte]
   def decode(featureValue: AValue) : SimpleFeature

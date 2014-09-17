@@ -292,8 +292,8 @@ class AccumuloDataStore(val connector: Connector,
   def getSpatioTemporalMaxShard(featureType: SimpleFeatureType): Int = {
     val indexSchemaFmt = readMetadataItem(featureType.getTypeName, SCHEMA_CF)
       .getOrElse(throw new RuntimeException(s"Unable to find required metadata property for $SCHEMA_CF"))
-    val encoding = getFeatureEncoder(featureType)
-    val indexSchema = IndexSchema(indexSchemaFmt, featureType, encoding)
+    val featureEncoder = getFeatureEncoder(featureType)
+    val indexSchema = IndexSchema(indexSchemaFmt, featureType, featureEncoder)
     indexSchema.maxShard
   }
 

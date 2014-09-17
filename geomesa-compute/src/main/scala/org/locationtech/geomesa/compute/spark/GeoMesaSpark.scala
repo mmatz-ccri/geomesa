@@ -106,11 +106,12 @@ class KryoAvroSimpleFeatureBridge extends KryoRegistrator {
             }
           })
 
+        // There is some overhead to managing this with a cache and it may be better to find a way
+        // to do this outside of the methods write() and read() and make the encoder a member
+        // variable on the instance of the Serializer
         val encoderCache = CacheBuilder.newBuilder().build(
           new CacheLoader[String, AvroFeatureEncoder] {
-            override def load(key: String): AvroFeatureEncoder = {
-              new AvroFeatureEncoder(typeCache.get(key))
-            }
+            override def load(key: String): AvroFeatureEncoder = new AvroFeatureEncoder(typeCache.get(key))
           })
 
         override def write(kryo: Kryo, out: Output, feature: AvroSimpleFeature): Unit = {
