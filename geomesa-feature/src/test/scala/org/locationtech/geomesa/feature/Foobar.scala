@@ -21,7 +21,7 @@ import java.text.SimpleDateFormat
 import java.util.UUID
 
 import com.vividsolutions.jts.geom.{Point, Polygon}
-import org.apache.avro.io.{EncoderFactory, BinaryEncoder}
+import org.apache.avro.io.{BinaryEncoder, EncoderFactory}
 import org.geotools.filter.identity.FeatureIdImpl
 import org.locationtech.geomesa.utils.geohash.GeohashUtils
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
@@ -59,7 +59,7 @@ object Foobar {
       list.toList
     }
 
-    val features = createComplicatedFeatures(500000)
+    val features = createComplicatedFeatures(1000000)
 
     def one() = {
       val oldBaos = new ByteArrayOutputStream()
