@@ -1,3 +1,19 @@
+/*
+ * Copyright 2014 Commonwealth Computer Research, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.locationtech.geomesa.utils.geotools
 
 import java.util.{Date, UUID}
@@ -13,35 +29,35 @@ class SpecBuilder {
   private val entries = new ListBuffer[String]
 
   // Primitives
-  def stringType(name: String, index: Boolean = false): SpecBuilder  = append(name, index, "String")
-  def intType(name: String, index: Boolean = false): SpecBuilder     = append(name, index, "Integer")
-  def longType(name: String, index: Boolean = false): SpecBuilder    = append(name, index, "Long")
-  def floatType(name: String, index: Boolean = false): SpecBuilder   = append(name, index, "Float")
-  def doubleType(name: String, index: Boolean = false): SpecBuilder  = append(name, index, "Double")
-  def booleanType(name: String, index: Boolean = false): SpecBuilder = append(name, index, "Boolean")
+  def stringType(name: String, index: Boolean = false)  = append(name, index, "String")
+  def intType(name: String, index: Boolean = false)     = append(name, index, "Integer")
+  def longType(name: String, index: Boolean = false)    = append(name, index, "Long")
+  def floatType(name: String, index: Boolean = false)   = append(name, index, "Float")
+  def doubleType(name: String, index: Boolean = false)  = append(name, index, "Double")
+  def booleanType(name: String, index: Boolean = false) = append(name, index, "Boolean")
 
   // Helpful Types
-  def date(name: String, index: Boolean = false): SpecBuilder = append(name, index, "Date")
-  def uuid(name: String, index: Boolean = false): SpecBuilder = append(name, index, "UUID")
+  def date(name: String, index: Boolean = false) = append(name, index, "Date")
+  def uuid(name: String, index: Boolean = false) = append(name, index, "UUID")
 
   // Single Geometries
-  def point(name: String, default: Boolean = false, index: Boolean = false): SpecBuilder =
+  def point(name: String, default: Boolean = false, index: Boolean = false) =
     appendGeom(name, index, default, "Point")
-  def lineString(name: String, default: Boolean = false, index: Boolean = false): SpecBuilder =
+  def lineString(name: String, default: Boolean = false, index: Boolean = false) =
     appendGeom(name, index, default, "LineString")
   def polygon(name: String, default: Boolean = false, index: Boolean = false) =
     appendGeom(name, index, default, "Polygon")
-  def geometry(name: String, default: Boolean = false, index: Boolean = false): SpecBuilder =
+  def geometry(name: String, default: Boolean = false, index: Boolean = false) =
     appendGeom(name, index, default, "Geometry")
 
   // Multi Geometries
-  def multiPoint(name: String, default: Boolean = false, index: Boolean = false): SpecBuilder =
+  def multiPoint(name: String, default: Boolean = false, index: Boolean = false) =
     appendGeom(name, index, default, "MultiPoint")
-  def multiLineString(name: String, default: Boolean = false, index: Boolean = false): SpecBuilder =
+  def multiLineString(name: String, default: Boolean = false, index: Boolean = false) =
     appendGeom(name, index, default, "MultiLineString")
   def multiPolygon(name: String, default: Boolean = false, index: Boolean = false) =
     appendGeom(name, index, default, "MultiPolygon")
-  def geometryCollection(name: String, default: Boolean = false, index: Boolean = false): SpecBuilder =
+  def geometryCollection(name: String, default: Boolean = false, index: Boolean = false) =
     appendGeom(name, index, default, "GeometryCollection")
 
   // List and Map Types
@@ -104,12 +120,13 @@ object SpecBuilder {
       .longType("time")
       .mapType[UUID,String]("mymap", index=false)
       .listType[String]("intList")
+      .multiPolygon("myOtherGeom", index=true)
       .point("geom", default=true)
 
-    println(spec) // foobar:String,baz:String:index=true,time:Long,mymap:Map[UUID,String],intList:List[String],*geom:Point:srid=4326
+    println(spec) // foobar:String,baz:String:index=true,time:Long,mymap:Map[UUID,String],intList:List[String],myOtherGeom:MultiPolygon:srid=4326:index=true,*geom:Point:srid=4326
 
     val sft = SimpleFeatureTypes.parse(spec.toString())
-    println(sft.attributes.map(_.name).mkString(", ")) // foobar, baz, time, mymap, intList, geomgit
+    println(sft.attributes.map(_.name).mkString(", ")) // foobar, baz, time, mymap, intList, myOtherGeom, geom
 
   }
 }
