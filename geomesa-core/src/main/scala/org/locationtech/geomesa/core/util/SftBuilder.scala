@@ -132,8 +132,8 @@ class SftBuilder {
   }
 
   /** builds a SimpleFeatureType object from this builder */
-  def build(name: String) = {
-    val sft = SimpleFeatureTypes.createType(name, this.getSpec)
+  def build(nameSpec: String) = {
+    val sft = SimpleFeatureTypes.createType(nameSpec, this.getSpec)
     dtgFieldOpt.map(sft.getUserData.put(SF_PROPERTY_START_TIME, _))
     sft
   }
