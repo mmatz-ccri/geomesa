@@ -95,7 +95,7 @@ class SftBuilder {
   // Internal helper methods
   private def resolve(tt: UType): String =
     tt match {
-      case t if primitiveTypes.contains(tt) => tt.toString
+      case t if primitiveTypes.contains(tt) => simpleClassName(tt.toString)
       case t if tt == typeOf[Date]          => "Date"
       case t if tt == typeOf[UUID]          => "UUID"
     }
@@ -152,6 +152,7 @@ object SftBuilder {
 
   val primitiveTypes =
     List(
+      typeOf[java.lang.String],
       typeOf[String],
       typeOf[java.lang.Integer],
       typeOf[Int],
@@ -164,4 +165,7 @@ object SftBuilder {
       typeOf[java.lang.Boolean],
       typeOf[Boolean]
     )
+
+  def simpleClassName(clazz: String) = clazz.split("[.]").last
+
 }

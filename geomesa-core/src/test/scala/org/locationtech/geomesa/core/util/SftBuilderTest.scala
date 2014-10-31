@@ -158,6 +158,35 @@ class SftBuilderTest extends Specification {
       sft.getAttributeDescriptors.map(_.getType.getBinding).forall (_ must beAssignableFrom[java.util.List[_]])
     }
 
+
+    "build lists with Java Types" >> {
+      val builder = new SftBuilder()
+        .listType[java.lang.Integer]("i")
+        .listType[java.lang.Long]("l")
+        .listType[java.lang.Float]("f")
+        .listType[java.lang.Double]("d")
+        .listType[java.lang.String]("s")
+        .listType[java.util.Date]("dt")
+        .listType[java.util.UUID]("u")
+
+      val expected =
+        List(
+          "i" -> "Integer", //for java use Integer instead of Int
+          "l" -> "Long",
+          "f" -> "Float",
+          "d" -> "Double",
+          "s" -> "String",
+          "dt" -> "Date",
+          "u" -> "UUID"
+        ).map { case (k,v) => s"$k:List[$v]" }.mkString(",")
+
+      builder.getSpec() mustEqual expected
+
+      val sft = builder.build("foobar")
+      sft.getAttributeCount mustEqual 7
+      sft.getAttributeDescriptors.map(_.getType.getBinding).forall (_ must beAssignableFrom[java.util.List[_]])
+    }
+
     "build maps" >> {
       val builder = new SftBuilder()
         .mapType[Int,Int]("i")
