@@ -20,6 +20,7 @@ import java.util.{Date, UUID}
 
 import org.locationtech.geomesa.utils.geotools.SpecBuilder._
 
+import SimpleFeatureTypes.Splitter
 import scala.collection.mutable.ListBuffer
 import scala.reflect.runtime.universe.{Type => UType, _}
 
@@ -27,6 +28,7 @@ import scala.reflect.runtime.universe.{Type => UType, _}
 class SpecBuilder {
 
   private val entries = new ListBuffer[String]
+  private var splitterOpt: Option[Splitter] = None
 
   // Primitives
   def stringType(name: String, index: Boolean = false)  = append(name, index, "String")
@@ -87,11 +89,35 @@ class SpecBuilder {
 
   private def indexPart(index: Boolean) = if (index) Some("index=true") else None
 
-  override def toString() = entries.mkString(SepEntry)
+  def recordSplitter(clazz: String, splitOptions: Map[String,String] = Map()): SpecBuilder = {
+    this.splitterOpt = Some(Splitter(clazz, splitOptions))
+    this
+  }
+
+  // note that SimpleFeatureTypes requires that this be ordered properly
+  private def splitPart = splitterOpt.map { s =>
+      List(
+        SimpleFeatureTypes.TABLE_SPLITTER + "=" + s.splitterClazz,
+        SimpleFeatureTypes.TABLE_SPLITTER_OPTIONS + "=" + encodeSplitOptions(s.options)
+      ).mkString(",")
+    }
+
+  override def toString() = {
+    val entryLst = List(entries.mkString(SepEntry))
+    val splitLst = splitPart.map(List(_)).getOrElse(List())
+    (entryLst ++ splitLst).mkString(";")
+  }
+
+  def buildSFT(name: String) = SimpleFeatureTypes.createType(name, this.toString)
 
 }
 
 object SpecBuilder {
+
+  def encodeSplitOptions(opts: Map[String,String]) = encodeMap(opts, ":", ",")
+
+  def encodeMap(opts: Map[String,String], kvSep: String, entrySep: String) =
+    opts.map { case (k, v) => (k + kvSep + v) }.mkString(entrySep)
 
   val SridPart = "srid=4326"
   val SepPart  = ":"
@@ -111,23 +137,5 @@ object SpecBuilder {
       typeOf[java.lang.Boolean],
       typeOf[Boolean]
     )
-
-
-  def main(args: Array[String]) = {
-    val spec = new SpecBuilder()
-      .stringType("foobar")
-      .stringType("baz", index=true)
-      .longType("time")
-      .mapType[UUID,String]("mymap", index=false)
-      .listType[String]("intList")
-      .multiPolygon("myOtherGeom", index=true)
-      .point("geom", default=true)
-
-    println(spec) // foobar:String,baz:String:index=true,time:Long,mymap:Map[UUID,String],intList:List[String],myOtherGeom:MultiPolygon:srid=4326:index=true,*geom:Point:srid=4326
-
-    val sft = SimpleFeatureTypes.parse(spec.toString())
-    println(sft.attributes.map(_.name).mkString(", ")) // foobar, baz, time, mymap, intList, myOtherGeom, geom
-
-  }
 }
 

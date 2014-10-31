@@ -31,5 +31,25 @@ class SpecBuilderTest extends Specification {
       val expected = "i:Integer,l:Long,f:Float,d:Double,s:String,dt:Date,u:UUID".split(",").map(_+":index=true").mkString(",")
       spec mustEqual expected
     }
+
+    "configure table splitters properly" >> {
+      val sft = new SpecBuilder()
+        .intType("i")
+        .longType("l")
+        .recordSplitter("org.locationtech.geomesa.core.data.DigitSplitter", Map("fmt" ->"%02d", "min" -> "0", "max" -> "99"))
+        .buildSFT("test")
+
+      import scala.collection.JavaConversions._
+
+      sft.getAttributeCount mustEqual 2
+      sft.getAttributeDescriptors.map(_.getLocalName) must containAllOf( List("i", "l"))
+
+      sft.getUserData.get(SimpleFeatureTypes.TABLE_SPLITTER) must be equalTo "org.locationtech.geomesa.core.data.DigitSplitter"
+      val opts = sft.getUserData.get(SimpleFeatureTypes.TABLE_SPLITTER_OPTIONS).asInstanceOf[Map[String, String]]
+      opts.size must be equalTo 3
+      opts("fmt") must be equalTo "%02d"
+      opts("min") must be equalTo "0"
+      opts("max") must be equalTo "99"
+    }
   }
 }
