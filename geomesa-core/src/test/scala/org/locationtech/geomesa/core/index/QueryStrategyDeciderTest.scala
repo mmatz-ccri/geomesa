@@ -156,6 +156,12 @@ class QueryStrategyDeciderTest extends Specification {
       getStrategy(fs) must beAnInstanceOf[AttributeIdxRangeStrategy]
     }
 
+    "get the attribute strategy for indexed dtg between filter" in {
+      val fs = "dtg BETWEEN 2014-01-01T12:30:00.000Z AND 2014-02-01T12:30:00.000Z"
+
+      getStrategy(fs) must beAnInstanceOf[AttributeIdxRangeStrategy]
+    }
+
     "get the attribute strategy for between" in {
       val fs = "attr2 BETWEEN 10 and 20"
 
