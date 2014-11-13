@@ -34,7 +34,7 @@ class QueryStrategyDeciderTest extends Specification {
   val sftIndex = new SftBuilder()
     .intType("id")
     .point("geom", default=true, index=true)
-    .date("dtg", default=true)
+    .date("dtg", default=true, index=true)
     .stringType("attr1")
     .stringType("attr2", true)
     .date("dtgNonIdx")
@@ -43,7 +43,7 @@ class QueryStrategyDeciderTest extends Specification {
   val sftNonIndex = new SftBuilder()
     .intType("id")
     .point("geom", default=true)
-    .date("dtg", default=true)
+    .date("dtg", default=true, index=true)
     .stringType("attr1")
     .stringType("attr2")
     .build("featureNonIndex")
@@ -54,6 +54,10 @@ class QueryStrategyDeciderTest extends Specification {
     val query = new Query(sft.getTypeName)
     query.setFilter(filter)
     QueryStrategyDecider.chooseStrategy(isCatalogTable, sft, query)
+  }
+
+  def getStrategyByQueryIndex(query: Query): Strategy = {
+    QueryStrategyDecider.chooseStrategy(true, sftIndex, query)
   }
 
   def getStrategyT[T <: Strategy](filterString: String, ct: ClassTag[T]) =
@@ -160,6 +164,18 @@ class QueryStrategyDeciderTest extends Specification {
       val fs = "dtg BETWEEN 2014-01-01T12:30:00.000Z AND 2014-02-01T12:30:00.000Z"
 
       getStrategy(fs) must beAnInstanceOf[AttributeIdxRangeStrategy]
+    }
+
+    "get the attribute strategy for indexed dtg between filter with geom Projection" in {
+      val fs = "dtg BETWEEN 2014-01-01T12:30:00.000Z AND 2014-02-01T12:30:00.000Z"
+
+      val sft = sftIndex
+      val filter = ECQL.toFilter(fs)
+      val query = new Query(sft.getTypeName)
+      query.setFilter(filter)
+      query.setPropertyNames(Array("geom"))
+
+      getStrategyByQueryIndex(query) must beAnInstanceOf[AttributeIdxRangeStrategy]
     }
 
     "get the attribute strategy for between" in {
