@@ -60,10 +60,28 @@ class BasicTemporalPredicateTest extends FilterTester {
 }
 
 @RunWith(classOf[JUnitRunner])
+class BasicTemporalPredicateWithProjectionsTest extends FilterTester {
+  val filters = temporalPredicates
+  runTest
+
+  override def modifyQuery(query: Query): Unit = query.setPropertyNames(Array("geom"))
+}
+
+
+@RunWith(classOf[JUnitRunner])
 class BasicSpatioTemporalPredicateTest extends FilterTester {
   val filters = spatioTemporalPredicates
   runTest
 }
+
+@RunWith(classOf[JUnitRunner])
+class BasicSpatioTemporalPredicateWithProjectionTest extends FilterTester {
+  val filters = spatioTemporalPredicates
+  runTest
+
+  override def modifyQuery(query: Query): Unit = query.setPropertyNames(Array("geom"))
+}
+
 
 @RunWith(classOf[JUnitRunner])
 class AttributePredicateTest extends FilterTester {
