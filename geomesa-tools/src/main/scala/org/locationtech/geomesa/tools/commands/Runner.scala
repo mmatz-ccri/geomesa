@@ -13,10 +13,12 @@ object Runner {
 //    val jc = JCommanderBridge.create(MainArgs)
 //    jc.setProgramName("java -jar <jarfile>")
 
-    val jc = new JCommander(MainArgs, args.toArray: _*)
+    val jc        = new JCommander(MainArgs, args.toArray: _*)
     val tableConf = new TableConfCommand(jc)
-    val listCom = new ListCommand(jc)
-    val export  = new ExportCommand(jc)
+    val listCom   = new ListCommand(jc)
+    val export    = new ExportCommand(jc)
+    val delete    = new DeleteCommand(jc)
+    val describe  = new DescribeCommand(jc)
 
 
 
@@ -36,17 +38,20 @@ object Runner {
 //      "--maxFeatures", "236236",
 //      "--query" ,"INCLUDE")
 
+    // TODO trait or something?
     jc.getParsedCommand match {
       case TableConfCommand.Command => tableConf.execute()
       case ListCommand.Command      => listCom.execute()
       case ExportCommand.Command    => export.execute()
+      case DeleteCommand.Command    => delete.execute()
+      case DescribeCommand.Command  => describe.execute()
     }
 
   }
 
   def mkSubCommand(parent: JCommander, name: String, obj: Object): JCommander = {
-    parent.addCommand(name, obj);
-    parent.getCommands().get(name);
+    parent.addCommand(name, obj)
+    parent.getCommands().get(name)
   }
 }
 

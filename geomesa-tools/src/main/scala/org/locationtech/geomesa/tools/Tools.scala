@@ -90,20 +90,20 @@ object Tools extends App with Logging with GetPassword {
 //      visibilitiesOpt,
 //      authsOpt
 //      )
-
-    def delete = cmd("delete") action { (_, c) =>
-      c.copy(mode = "delete") } text "Delete a feature from the specified Catalog Table in GeoMesa" children(
-      userOpt,
-      passOpt,
-      catalogOpt,
-      featureOpt,
-      instanceNameOpt,
-      zookeepersOpt,
-      visibilitiesOpt,
-      authsOpt,
-      opt[Unit]("force").action { (b, c) =>
-        c.copy(forceDelete = true) } text "delete without prompt for confirmation" optional()
-      )
+//
+//    def delete = cmd("delete") action { (_, c) =>
+//      c.copy(mode = "delete") } text "Delete a feature from the specified Catalog Table in GeoMesa" children(
+//      userOpt,
+//      passOpt,
+//      catalogOpt,
+//      featureOpt,
+//      instanceNameOpt,
+//      zookeepersOpt,
+//      visibilitiesOpt,
+//      authsOpt,
+//      opt[Unit]("force").action { (b, c) =>
+//        c.copy(forceDelete = true) } text "delete without prompt for confirmation" optional()
+//      )
 
     def create = cmd("create") action { (_, c) =>
       c.copy(mode = "create") } text "Create a feature in GeoMesa" children(
@@ -276,9 +276,9 @@ object Tools extends App with Logging with GetPassword {
 //        case "explain" =>
 //          val ft = new FeaturesTool(config, pw)
 //          ft.explainQuery()
-        case "delete" =>
-          val ft = new FeaturesTool(config, pw)
-          ft.deleteFeature()
+//        case "delete" =>
+//          val ft = new FeaturesTool(config, pw)
+//          ft.deleteFeature()
         case "create" =>
           val ft = new FeaturesTool(config, pw)
           ft.createFeature()
