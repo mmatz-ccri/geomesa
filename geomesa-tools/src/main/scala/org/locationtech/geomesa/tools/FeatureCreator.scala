@@ -28,7 +28,6 @@ object FeatureCreator extends Logging {
       else
         ds.createSchema(sft)
 
-
       if (ds.getSchema(featureName) != null) {
         logger.info(s"Feature '$featureName' on catalog table '$catalog' with spec " +
           s"'$spec' successfully created.")
@@ -43,6 +42,5 @@ object FeatureCreator extends Logging {
     }
     
   }
-  
-  
+
 }

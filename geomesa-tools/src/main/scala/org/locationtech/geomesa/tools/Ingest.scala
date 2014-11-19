@@ -58,7 +58,7 @@ class Ingest() extends Logging with AccumuloProperties {
   }
 
   def getAccumuloDataStoreConf(config: IngestArguments, password: String) = Map (
-      "instanceId"        -> config.instanceName.getOrElse(instance),
+      "instanceId"        -> config.instanceName.getOrElse(instanceName),
       "zookeepers"        -> config.zookeepers.getOrElse(zookeepersProp),
       "user"              -> config.username,
       "password"          -> password,
@@ -122,7 +122,7 @@ class Ingest() extends Logging with AccumuloProperties {
     args.append("--" + IngestParams.SFT_SPEC, URLEncoder.encode(config.spec, "UTF-8"))
     args.append("--" + IngestParams.CATALOG_TABLE, config.catalog)
     args.append("--" + IngestParams.ZOOKEEPERS, config.zookeepers.getOrElse(zookeepersProp))
-    args.append("--" + IngestParams.ACCUMULO_INSTANCE, config.instanceName.getOrElse(instance))
+    args.append("--" + IngestParams.ACCUMULO_INSTANCE, config.instanceName.getOrElse(instanceName))
     args.append("--" + IngestParams.ACCUMULO_USER, config.username)
     args.append("--" + IngestParams.ACCUMULO_PASSWORD, password)
     args.append("--" + IngestParams.DO_HASH, config.doHash.toString)

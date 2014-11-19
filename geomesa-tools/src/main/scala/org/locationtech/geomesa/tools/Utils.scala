@@ -163,17 +163,20 @@ trait GetPassword {
 /* Accumulo properties trait */
 trait AccumuloProperties extends Logging {
   lazy val accumuloConf = XML.loadFile(s"${System.getenv("ACCUMULO_HOME")}/conf/accumulo-site.xml")
+
   lazy val zookeepersProp = (accumuloConf \\ "property")
     .filter(x => (x \ "name")
     .text == "instance.zookeeper.host")
     .map(y => (y \ "value").text)
     .head
+
   lazy val instanceDfsDir = Try((accumuloConf \\ "property")
     .filter(x => (x \ "name")
     .text == "instance.dfs.dir")
     .map(y => (y \ "value").text)
     .head)
     .getOrElse("/accumulo")
+
   lazy val instanceIdStr = Try(ZooKeeperInstance.getInstanceIDFromHdfs(new Path(instanceDfsDir, "instance_id"))).getOrElse({
     logger.error(
       "Error retrieving /accumulo/instance_id from HDFS. To resolve this, double check that the \n" +
@@ -181,5 +184,6 @@ trait AccumuloProperties extends Logging {
       "Accumulo Instance Name as an argument with the --instance-name flag.")
     sys.exit()
   })
+
   lazy val instanceName = new ZooKeeperInstance(UUID.fromString(instanceIdStr), zookeepersProp).getInstanceName
 }

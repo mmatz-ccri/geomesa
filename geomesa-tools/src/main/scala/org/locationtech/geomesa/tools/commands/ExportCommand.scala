@@ -9,30 +9,7 @@ class ExportCommand(parent: JCommander) {
   val params = new ExportParams
   parent.addCommand(Command, params)
 
-  def execute() = {
-//    val traditionalExportArgs =
-//      new ExportArguments(
-//        username = params.user,
-//        password = Some(params.password),
-//        mode = null,
-//        featureName = params.featureName,
-//        format = params.format,
-//        toStdOut = params.stdOut,
-//        maxFeatures = Some(params.maxFeatures),
-//        attributes = Some(params.attributes),
-//        lonAttribute = Some(params.lonAttribute),
-//        latAttribute = Some(params.latAttribute),
-//        query = Some(params.cqlFilter),
-//        instanceName = Some(params.instance),
-//        zookeepers = Some(params.zookeepers),
-//        visibilities = Some(params.visibilities),
-//        auths = Some(params.auths),
-//        idFields = Some(params.idAttribute),
-//        dtField = Some(params.dateAttribute)
-//      )
-//    new Export(traditionalExportArgs).exportFeatures()
-    new Export(params).exportFeatures()
-  }
+  def execute() = new Export(params).exportFeatures()
 
 }
 

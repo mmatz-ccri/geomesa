@@ -50,46 +50,46 @@ object Tools extends App with Logging with GetPassword {
     def shardOpt = opt[Option[Int]]("shards") action { (i, c) =>
       c.copy(maxShards = i) } text "Accumulo number of shards to use (optional)" optional()
 
-    def describe = cmd("describe") action { (_, c) =>
-      c.copy(mode = "describe") } text "Describe the specified feature" children(
-      userOpt,
-      passOpt,
-      catalogOpt,
-      featureOpt,
-      opt[Unit]('q', "quiet").action { (_, c) =>
-        c.copy(toStdOut = true) } optional(),
-      instanceNameOpt,
-      zookeepersOpt,
-      visibilitiesOpt,
-      authsOpt
-      )
-
-    def list = cmd("list") action { (_, c) =>
-      c.copy(mode = "list") } text "List the features in the specified Catalog Table" children(
-      userOpt,
-      passOpt,
-      catalogOpt,
-      opt[Unit]('q', "quiet").action { (_, c) =>
-        c.copy(toStdOut = true) } optional(),
-      instanceNameOpt,
-      zookeepersOpt,
-      visibilitiesOpt,
-      authsOpt
-      )
-
-    def explain = cmd("explain") action { (_, c) =>
-      c.copy(mode = "explain") } text "Explain and plan a query in GeoMesa" children(
-      userOpt,
-      passOpt,
-      catalogOpt,
-      featureOpt,
-      opt[String]('q', "filter").action { (s, c) =>
-        c.copy(query = s) } required(),
-      instanceNameOpt,
-      zookeepersOpt,
-      visibilitiesOpt,
-      authsOpt
-      )
+//    def describe = cmd("describe") action { (_, c) =>
+//      c.copy(mode = "describe") } text "Describe the specified feature" children(
+//      userOpt,
+//      passOpt,
+//      catalogOpt,
+//      featureOpt,
+//      opt[Unit]('q', "quiet").action { (_, c) =>
+//        c.copy(toStdOut = true) } optional(),
+//      instanceNameOpt,
+//      zookeepersOpt,
+//      visibilitiesOpt,
+//      authsOpt
+//      )
+//
+//    def list = cmd("list") action { (_, c) =>
+//      c.copy(mode = "list") } text "List the features in the specified Catalog Table" children(
+//      userOpt,
+//      passOpt,
+//      catalogOpt,
+//      opt[Unit]('q', "quiet").action { (_, c) =>
+//        c.copy(toStdOut = true) } optional(),
+//      instanceNameOpt,
+//      zookeepersOpt,
+//      visibilitiesOpt,
+//      authsOpt
+//      )
+//
+//    def explain = cmd("explain") action { (_, c) =>
+//      c.copy(mode = "explain") } text "Explain and plan a query in GeoMesa" children(
+//      userOpt,
+//      passOpt,
+//      catalogOpt,
+//      featureOpt,
+//      opt[String]('q', "filter").action { (s, c) =>
+//        c.copy(query = s) } required(),
+//      instanceNameOpt,
+//      zookeepersOpt,
+//      visibilitiesOpt,
+//      authsOpt
+//      )
 
     def delete = cmd("delete") action { (_, c) =>
       c.copy(mode = "delete") } text "Delete a feature from the specified Catalog Table in GeoMesa" children(
@@ -255,7 +255,7 @@ object Tools extends App with Logging with GetPassword {
         "\texplain: Explain and plan a query in GeoMesa\n" +
         "\texport: Export all or a set of features in CSV, TSV, GeoJSON, GML, or SHP format\n" +
         "\tingest: Ingest features into GeoMesa\n" +
-        "\tlist: List the features in the specified Catalog Table\n" +
+//        "\tlist: List the features in the specified Catalog Table\n" +
         "\ttableconf: List, describe, and update table configuration parameters"
     }
     logger.info(s"$help")
@@ -267,15 +267,15 @@ object Tools extends App with Logging with GetPassword {
     parser.parse(args, FeatureArguments()).map(config => {
       val pw = password(config.password)
       config.mode match {
-        case "list" =>
-          val ft = new FeaturesTool(config, pw)
-          ft.listFeatures()
-        case "describe" =>
-          val ft = new FeaturesTool(config, pw)
-          ft.describeFeature()
-        case "explain" =>
-          val ft = new FeaturesTool(config, pw)
-          ft.explainQuery()
+//        case "list" =>
+//          val ft = new FeaturesTool(config, pw)
+//          ft.listFeatures()
+//        case "describe" =>
+//          val ft = new FeaturesTool(config, pw)
+//          ft.describeFeature()
+//        case "explain" =>
+//          val ft = new FeaturesTool(config, pw)
+//          ft.explainQuery()
         case "delete" =>
           val ft = new FeaturesTool(config, pw)
           ft.deleteFeature()

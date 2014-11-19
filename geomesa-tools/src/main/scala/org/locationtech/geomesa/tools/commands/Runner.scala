@@ -22,19 +22,19 @@ object Runner {
 
     //jc.parse("tableconf", "list", "-s", "foo", "-u", "user", "-f", "feat", "-c", "la", "-p")
     //jc.parse("list", "-u", "user", "-p", "-c", "catalog")
-    jc.parse("export",
-      "-u", "user",
-      "-p",
-      "-c", "catalog",
-      "-f", "featname",
-      "-s",
-      "--format", "csv",
-      "--idAttribute", "idAttr",
-      "--latAttribute", "latAttr",
-      "--lonAttribute", "lonAttr",
-      "--dateAttribute", "dateAttr",
-      "--maxFeatures", "236236",
-      "--query" ,"INCLUDE")
+//    jc.parse("export",
+//      "-u", "user",
+//      "-p",
+//      "-c", "catalog",
+//      "-f", "featname",
+//      "-s",
+//      "--format", "csv",
+//      "--idAttribute", "idAttr",
+//      "--latAttribute", "latAttr",
+//      "--lonAttribute", "lonAttr",
+//      "--dateAttribute", "dateAttr",
+//      "--maxFeatures", "236236",
+//      "--query" ,"INCLUDE")
 
     jc.getParsedCommand match {
       case TableConfCommand.Command => tableConf.execute()

@@ -46,6 +46,7 @@ class Export(params: ExportParams) extends DataStoreStuff(params) with Logging {
     Thread.sleep(1000)
   }
 
+  // TODO examine this method
   def createUniqueFileName(): File = {
     var outputPath: File = null
     do {
@@ -55,8 +56,8 @@ class Export(params: ExportParams) extends DataStoreStuff(params) with Logging {
     outputPath
   }
 
+  // TODO examine this method
   def exportDelimitedText(outputFile: File) = {
-    val sftCollection = getFeatureCollection()
     val loadAttributes = new LoadAttributes(params.featureName,
       params.catalog,
       params.attributes,
@@ -68,7 +69,8 @@ class Export(params: ExportParams) extends DataStoreStuff(params) with Logging {
       params.format,
       params.stdOut,
       outputFile)
-    val de = new SVExport(loadAttributes, Map(
+
+    new SVExport(loadAttributes, Map(
       "instanceId"   -> instance,
       "zookeepers"   -> zookeepersString,
       "user"         -> params.user,
@@ -76,7 +78,7 @@ class Export(params: ExportParams) extends DataStoreStuff(params) with Logging {
       "tableName"    -> params.catalog,
       "visibilities" -> params.visibilities,
       "auths"        -> params.auths))
-    de.writeFeatures(sftCollection.features())
+    .writeFeatures(getFeatureCollection().features)
   }
 
   def exportShapeFile(outputFile: File) = {
@@ -116,8 +118,8 @@ class Export(params: ExportParams) extends DataStoreStuff(params) with Logging {
   def getFeatureCollection(overrideAttributes: Option[String] = None): SimpleFeatureCollection = {
     val filter = Option(params.cqlFilter).map(CQL.toFilter).getOrElse(Filter.INCLUDE)
     val q = new Query(params.featureName, filter)
+    q.setMaxFeatures(Option(params.maxFeatures).getOrElse(Query.DEFAULT_MAX.asInstanceOf[Integer]).toInt)
 
-    q.setMaxFeatures(Option(params.maxFeatures).getOrElse(Query.DEFAULT_MAX.asInstanceOf[Integer]))
     val attributesO = if (overrideAttributes.isDefined) overrideAttributes
                       else if (Option(params.attributes).isDefined) Some(params.attributes)
                       else None
