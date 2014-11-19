@@ -1,8 +1,8 @@
 package org.locationtech.geomesa.tools.commands
 
 import com.beust.jcommander.{JCommander, Parameter}
-import org.locationtech.geomesa.tools.commands.ExportCommand.Command
-import org.locationtech.geomesa.tools.{Export, ExportArguments}
+import org.locationtech.geomesa.tools.Export
+import org.locationtech.geomesa.tools.commands.ExportCommand.{Command, ExportParams}
 
 class ExportCommand(parent: JCommander) {
 
@@ -10,28 +10,34 @@ class ExportCommand(parent: JCommander) {
   parent.addCommand(Command, params)
 
   def execute() = {
-    val traditionalExportArgs =
-      new ExportArguments(
-        username = params.user,
-        password = Some(params.password),
-        mode = null,
-        featureName = params.featureName,
-        format = params.format,
-        toStdOut = params.stdOut,
-        maxFeatures = Some(params.maxFeatures),
-        attributes = Some(params.attributes),
-        lonAttribute = Some(params.lonAttribute),
-        latAttribute = Some(params.latAttribute),
-        query = Some(params.cqlFilter),
-        instanceName = Some(params.instance),
-        zookeepers = Some(params.zookeepers),
-        visibilities = Some(params.visibilities),
-        auths = Some(params.auths),
-        idFields = Some(params.idAttribute),
-        dtField = Some(params.dateAttribute)
-      )
-    new Export(traditionalExportArgs).exportFeatures()
+//    val traditionalExportArgs =
+//      new ExportArguments(
+//        username = params.user,
+//        password = Some(params.password),
+//        mode = null,
+//        featureName = params.featureName,
+//        format = params.format,
+//        toStdOut = params.stdOut,
+//        maxFeatures = Some(params.maxFeatures),
+//        attributes = Some(params.attributes),
+//        lonAttribute = Some(params.lonAttribute),
+//        latAttribute = Some(params.latAttribute),
+//        query = Some(params.cqlFilter),
+//        instanceName = Some(params.instance),
+//        zookeepers = Some(params.zookeepers),
+//        visibilities = Some(params.visibilities),
+//        auths = Some(params.auths),
+//        idFields = Some(params.idAttribute),
+//        dtField = Some(params.dateAttribute)
+//      )
+//    new Export(traditionalExportArgs).exportFeatures()
+    new Export(params).exportFeatures()
   }
+
+}
+
+object ExportCommand {
+  val Command = "export"
 
   class ExportParams extends CqlParams {
     @Parameter(names = Array("--format"), description = "Format to export (csv|tsv|gml|json|shp)", required = true)
@@ -62,8 +68,4 @@ class ExportCommand(parent: JCommander) {
     @Parameter(names = Array("--dateAttribute"), description = "name of the date attribute to export")
     var dateAttribute: String = null
   }
-}
-
-object ExportCommand {
-  val Command = "export"
 }
