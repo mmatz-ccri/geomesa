@@ -21,6 +21,11 @@ import java.util.UUID
 import com.typesafe.scalalogging.slf4j.Logging
 import org.apache.accumulo.core.client.ZooKeeperInstance
 import org.apache.hadoop.fs.Path
+import org.geotools.data.DataStoreFinder
+import org.locationtech.geomesa.core.data.AccumuloDataStore
+import org.locationtech.geomesa.tools.commands.GeoMesaParams
+
+import scala.collection.JavaConversions._
 
 import scala.util.Try
 import scala.xml.XML
@@ -31,7 +36,7 @@ import scala.xml.XML
  *  classes where commands get executed.
  */
 
-object Utils {
+object Utils extends Logging {
 
   object IngestParams {
     val ACCUMULO_INSTANCE   = "geomesa-tools.ingest.instance"
@@ -60,6 +65,26 @@ object Utils {
 
   }
 
+  implicit class RichGeomesaParams(params: GeoMesaParams) extends AccumuloProperties {
+    val determineInstance = Option(params.instance).getOrElse(instanceName)
+    val determineZookeepers = Option(params.zookeepers).getOrElse(zookeepersProp)
+
+  }
+
+  def createDataStore(params: GeoMesaParams) = Try({
+      DataStoreFinder.getDataStore(Map(
+        "instanceId"   -> params.determineInstance,
+        "zookeepers"   -> params.determineZookeepers,
+        "user"         -> params.user,
+        "password"     -> params.password,
+        "tableName"    -> params.catalog,
+        "visibilities" -> Option(params.visibilities).orNull,
+        "auths"        -> Option(params.auths).orNull)).asInstanceOf[AccumuloDataStore]
+    }).getOrElse{
+      logger.error("Cannot connect to Accumulo. Please check your configuration and try again.")
+      sys.exit()
+    }
+
 }
 
 case class FeatureArguments(username: String = null,
@@ -82,7 +107,6 @@ case class FeatureArguments(username: String = null,
                             forceDelete: Boolean = false,
                             maxShards: Option[Int] = None,
                             sharedTable: Option[Boolean] = Some(true))
-
 
 case class ExportArguments(username: String = null,
                            password: Option[String] = None,
@@ -139,7 +163,7 @@ trait GetPassword {
 /* Accumulo properties trait */
 trait AccumuloProperties extends Logging {
   lazy val accumuloConf = XML.loadFile(s"${System.getenv("ACCUMULO_HOME")}/conf/accumulo-site.xml")
-  lazy val zookeepers = (accumuloConf \\ "property")
+  lazy val zookeepersProp = (accumuloConf \\ "property")
     .filter(x => (x \ "name")
     .text == "instance.zookeeper.host")
     .map(y => (y \ "value").text)
@@ -157,6 +181,5 @@ trait AccumuloProperties extends Logging {
       "Accumulo Instance Name as an argument with the --instance-name flag.")
     sys.exit()
   })
-  lazy val instanceName = new ZooKeeperInstance(UUID.fromString(instanceIdStr), zookeepers).getInstanceName
+  lazy val instanceName = new ZooKeeperInstance(UUID.fromString(instanceIdStr), zookeepersProp).getInstanceName
 }
-
