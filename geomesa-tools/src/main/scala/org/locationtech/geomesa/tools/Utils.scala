@@ -65,25 +65,25 @@ object Utils extends Logging {
 
   }
 
-  implicit class RichGeomesaParams(params: GeoMesaParams) extends AccumuloProperties {
-    val determineInstance = Option(params.instance).getOrElse(instanceName)
-    val determineZookeepers = Option(params.zookeepers).getOrElse(zookeepersProp)
-
-  }
-
-  def createDataStore(params: GeoMesaParams) = Try({
-      DataStoreFinder.getDataStore(Map(
-        "instanceId"   -> params.determineInstance,
-        "zookeepers"   -> params.determineZookeepers,
-        "user"         -> params.user,
-        "password"     -> params.password,
-        "tableName"    -> params.catalog,
-        "visibilities" -> Option(params.visibilities).orNull,
-        "auths"        -> Option(params.auths).orNull)).asInstanceOf[AccumuloDataStore]
-    }).getOrElse{
-      logger.error("Cannot connect to Accumulo. Please check your configuration and try again.")
-      sys.exit()
-    }
+//  implicit class RichGeomesaParams(params: GeoMesaParams) extends AccumuloProperties {
+//    val determineInstance = Option(params.instance).getOrElse(instanceName)
+//    val determineZookeepers = Option(params.zookeepers).getOrElse(zookeepersProp)
+//
+//  }
+//
+//  def createDataStore(params: GeoMesaParams) = Try({
+//      DataStoreFinder.getDataStore(Map(
+//        "instanceId"   -> params.determineInstance,
+//        "zookeepers"   -> params.determineZookeepers,
+//        "user"         -> params.user,
+//        "password"     -> params.password,
+//        "tableName"    -> params.catalog,
+//        "visibilities" -> Option(params.visibilities).orNull,
+//        "auths"        -> Option(params.auths).orNull)).asInstanceOf[AccumuloDataStore]
+//    }).getOrElse{
+//      logger.error("Cannot connect to Accumulo. Please check your configuration and try again.")
+//      sys.exit()
+//    }
 
 }
 

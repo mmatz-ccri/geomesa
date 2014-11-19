@@ -1,17 +1,36 @@
 package org.locationtech.geomesa.tools.commands
 
-import com.beust.jcommander.{JCommander, Parameter, ParametersDelegate}
-import org.locationtech.geomesa.tools.FeaturesTool
+import com.beust.jcommander.{JCommander, Parameter}
 import org.locationtech.geomesa.tools.commands.ExportCommand.Command
+import org.locationtech.geomesa.tools.{Export, ExportArguments}
 
 class ExportCommand(parent: JCommander) {
 
   val params = new ExportParams
   parent.addCommand(Command, params)
 
-  //TODO implement
   def execute() = {
-    println("geomesa exporter")
+    val traditionalExportArgs =
+      new ExportArguments(
+        username = params.user,
+        password = Some(params.password),
+        mode = null,
+        featureName = params.featureName,
+        format = params.format,
+        toStdOut = params.stdOut,
+        maxFeatures = Some(params.maxFeatures),
+        attributes = Some(params.attributes),
+        lonAttribute = Some(params.lonAttribute),
+        latAttribute = Some(params.latAttribute),
+        query = Some(params.cqlFilter),
+        instanceName = Some(params.instance),
+        zookeepers = Some(params.zookeepers),
+        visibilities = Some(params.visibilities),
+        auths = Some(params.auths),
+        idFields = Some(params.idAttribute),
+        dtField = Some(params.dateAttribute)
+      )
+    new Export(traditionalExportArgs).exportFeatures()
   }
 
   class ExportParams extends CqlParams {
@@ -19,7 +38,7 @@ class ExportCommand(parent: JCommander) {
     var format: String = null
 
     @Parameter(names = Array("--maxFeatures", "-m"), description = "Maximum number of features to return. default: Long.MaxValue")
-    var maxFeatures: Long = Long.MaxValue
+    var maxFeatures: Integer = Int.MaxValue
 
     @Parameter(names = Array("--stdout", "-s"), description = "flag to force export to std out")
     var stdOut: Boolean = false

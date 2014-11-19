@@ -28,7 +28,7 @@ import org.locationtech.geomesa.core.data.{AccumuloDataStore, AccumuloFeatureSto
 import scala.collection.JavaConversions._
 import scala.util.Try
 
-class Export(config: ExportArguments, password: String) extends Logging with AccumuloProperties {
+class Export(config: ExportArguments) extends Logging with AccumuloProperties {
 
   val instance = config.instanceName.getOrElse(instanceName)
   val zookeepersString = config.zookeepers.getOrElse(zookeepersProp)
@@ -38,7 +38,7 @@ class Export(config: ExportArguments, password: String) extends Logging with Acc
       "instanceId"   -> instance,
       "zookeepers"   -> zookeepersString,
       "user"         -> config.username,
-      "password"     -> password,
+      "password"     -> config.password,
       "tableName"    -> config.catalog,
       "visibilities" -> config.visibilities.orNull,
       "auths"        -> config.auths.orNull)).asInstanceOf[AccumuloDataStore]
@@ -86,7 +86,7 @@ class Export(config: ExportArguments, password: String) extends Logging with Acc
       "instanceId"   -> instance,
       "zookeepers"   -> zookeepersString,
       "user"         -> config.username,
-      "password"     -> password,
+      "password"     -> config.password,
       "tableName"    -> config.catalog,
       "visibilities" -> config.visibilities.orNull,
       "auths"        -> config.auths.orNull))
