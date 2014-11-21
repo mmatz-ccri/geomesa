@@ -4,13 +4,13 @@ import com.beust.jcommander.JCommander
 import org.locationtech.geomesa.tools.commands.ListCommand._
 
 // TODO consider the former -quiet option...?
-class ListCommand(parent: JCommander)  {
+class ListCommand(parent: JCommander) extends Command {
 
   val params = new GeoMesaParams
   parent.addCommand(Command, params)
+  lazy val ds = new DataStoreStuff(params).ds
 
-  def execute() = {
-    val ds = new DataStoreStuff(params).ds
+  override def execute() = {
     val types = ds.getTypeNames
     val numTypes = types.size
 

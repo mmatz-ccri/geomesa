@@ -4,14 +4,13 @@ import com.beust.jcommander.{JCommander, Parameter, Parameters}
 import com.typesafe.scalalogging.slf4j.Logging
 import org.apache.accumulo.core.client.TableNotFoundException
 import org.apache.accumulo.core.client.admin.TableOperations
-import org.apache.accumulo.core.client.impl.thrift.ThriftTableOperationException
 import org.locationtech.geomesa.core.data.AccumuloDataStore
 import org.locationtech.geomesa.tools.commands.Runner.mkSubCommand
 import org.locationtech.geomesa.tools.commands.TableConfCommand._
 
 import scala.collection.JavaConversions._
 
-class TableConfCommand(parent: JCommander) extends Logging {
+class TableConfCommand(parent: JCommander) extends Command with Logging {
 
   val jcTableConf    = mkSubCommand(parent, Command, new TableConfParams())
   val tcListParams   = new ListParams
@@ -42,9 +41,7 @@ class TableConfCommand(parent: JCommander) extends Logging {
         if (prop.nonEmpty) {
           println(prop)
         } else {
-          logger.error(s"Parameter '${tcDescParams.param}' not found. Please ensure that all arguments from the " +
-            s"previous command are correct, and try again.")
-          sys.exit(-1)
+          throw new Exception(s"Parameter '${tcDescParams.param}' not found in table $tableName")
         }
 
       case UpdateDommand =>
@@ -75,24 +72,16 @@ class TableConfCommand(parent: JCommander) extends Logging {
       val updatedProperty = getProp(param).get
       logger.info(s"'$param' on table '$tableName' is now set to: \n$updatedProperty")
     } catch {
-      case ttoe: ThriftTableOperationException =>
-        logger.error("Error altering the table property: "+ ttoe.getMessage, ttoe)
-        sys.exit(-1)
       case e: Exception =>
-        logger.error("Error updating the table property: " + e.getMessage, e)
-        sys.exit(-1)
+        throw new Exception("Error updating the table property: " + e.getMessage, e)
     }
 
   def getProperties()(implicit tableOps: TableOperations, tableName: String) =
     try {
       tableOps.getProperties(tableName)
     } catch {
-      case tnfe: TableNotFoundException => 
-        logger.error(s"Error: table $tableName could not be found: "+tnfe.getMessage, tnfe)
-        sys.exit(-1)
-      case e: Exception =>
-        logger.error(s"Error listing properties for $tableName."+e.getMessage, e)
-        sys.exit(-1)
+      case tnfe: TableNotFoundException =>
+        throw new Exception(s"Error: table $tableName could not be found: "+tnfe.getMessage, tnfe)
     }
 
   def getTableName(params: ListParams)(implicit ds: AccumuloDataStore) =
@@ -100,10 +89,8 @@ class TableConfCommand(parent: JCommander) extends Logging {
       case "st_idx"   => ds.getSpatioTemporalIdxTableName(params.featureName)
       case "attr_idx" => ds.getAttrIdxTableName(params.featureName)
       case "records"  => ds.getRecordTableForType(params.featureName)
-      case _ =>
-        logger.error("Incorrect table suffix. Please check that all arguments are correct and try again.")
-        sys.exit(-1)
-  }
+      case _          => throw new Exception(s"Invalid table suffix: ${params.suffix}")
+    }
 
 }
 

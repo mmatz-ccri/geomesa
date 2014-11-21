@@ -8,7 +8,7 @@ import org.opengis.feature.`type`.AttributeDescriptor
 
 import scala.collection.JavaConversions._
 
-class DescribeCommand(parent: JCommander) extends Logging {
+class DescribeCommand(parent: JCommander) extends Command with Logging {
 
   val params = new FeatureParams
   parent.addCommand(Command, params)

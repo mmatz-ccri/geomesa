@@ -4,12 +4,12 @@ import com.beust.jcommander.{JCommander, Parameter}
 import org.locationtech.geomesa.tools.Export
 import org.locationtech.geomesa.tools.commands.ExportCommand.{Command, ExportParams}
 
-class ExportCommand(parent: JCommander) {
+class ExportCommand(parent: JCommander) extends Command {
 
   val params = new ExportParams
   parent.addCommand(Command, params)
 
-  def execute() = new Export(params).exportFeatures()
+  override def execute() = new Export(params).exportFeatures()
 
 }
 

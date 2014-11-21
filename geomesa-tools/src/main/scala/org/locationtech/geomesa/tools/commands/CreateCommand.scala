@@ -1,17 +1,17 @@
 package org.locationtech.geomesa.tools.commands
 
-import com.beust.jcommander.{Parameter, JCommander}
+import com.beust.jcommander.{JCommander, Parameter}
 import com.typesafe.scalalogging.slf4j.Logging
 import org.locationtech.geomesa.tools.FeatureCreator
-import org.locationtech.geomesa.tools.commands.CreateCommand.{CreateParams, Command}
+import org.locationtech.geomesa.tools.commands.CreateCommand.{Command, CreateParams}
 
-class CreateCommand(parent: JCommander) extends Logging {
+class CreateCommand(parent: JCommander) extends Command with Logging {
 
   val params = new CreateParams()
   parent.addCommand(Command, params)
+  lazy val ds = new DataStoreStuff(params).ds
 
-  def execute() = {
-    val ds = new DataStoreStuff(params).ds
+  override def execute() =
     FeatureCreator.createFeature(
       ds,
       params.spec,
@@ -21,7 +21,6 @@ class CreateCommand(parent: JCommander) extends Logging {
       params.catalog,
       Option(params.numShards)
     )
-  }
 
 }
 

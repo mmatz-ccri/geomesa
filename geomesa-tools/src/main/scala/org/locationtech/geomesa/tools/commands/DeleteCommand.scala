@@ -1,16 +1,15 @@
 package org.locationtech.geomesa.tools.commands
 
-import com.beust.jcommander.{Parameter, ParametersDelegate, JCommander}
+import com.beust.jcommander.{JCommander, Parameter}
 import com.typesafe.scalalogging.slf4j.Logging
-import org.locationtech.geomesa.tools.FeaturesTool
 import org.locationtech.geomesa.tools.commands.DeleteCommand._
 
-class DeleteCommand(parent: JCommander) extends Logging {
+class DeleteCommand(parent: JCommander) extends Command with Logging {
 
   val params = new DeleteParams
   parent.addCommand(Command, params)
 
-  def execute() = {
+  override def execute() = {
     val feature = params.featureName
     val catalog = params.catalog
 

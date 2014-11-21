@@ -1,18 +1,13 @@
 package org.locationtech.geomesa.tools.commands
 
 import com.beust.jcommander.JCommander
+import com.typesafe.scalalogging.slf4j.Logging
 
-object Runner {
+object Runner extends Logging {
 
   object MainArgs {}
 
-  //http://stackoverflow.com/questions/10160086/java-cli-parser?answertab=active#tab-top
   def main(args: Array[String]): Unit = {
-
-    // Java class in this project to bridge varargs in Java
-//    val jc = JCommanderBridge.create(MainArgs)
-//    jc.setProgramName("java -jar <jarfile>")
-
     val jc        = new JCommander(MainArgs, args.toArray: _*)
     val tableConf = new TableConfCommand(jc)
     val listCom   = new ListCommand(jc)
@@ -20,33 +15,20 @@ object Runner {
     val delete    = new DeleteCommand(jc)
     val describe  = new DescribeCommand(jc)
 
+    val command: Command =
+      jc.getParsedCommand match {
+        case TableConfCommand.Command => tableConf
+        case ListCommand.Command      => listCom
+        case ExportCommand.Command    => export
+        case DeleteCommand.Command    => delete
+        case DescribeCommand.Command  => describe
+      }
 
-
-    //jc.parse("tableconf", "list", "-s", "foo", "-u", "user", "-f", "feat", "-c", "la", "-p")
-    //jc.parse("list", "-u", "user", "-p", "-c", "catalog")
-//    jc.parse("export",
-//      "-u", "user",
-//      "-p",
-//      "-c", "catalog",
-//      "-f", "featname",
-//      "-s",
-//      "--format", "csv",
-//      "--idAttribute", "idAttr",
-//      "--latAttribute", "latAttr",
-//      "--lonAttribute", "lonAttr",
-//      "--dateAttribute", "dateAttr",
-//      "--maxFeatures", "236236",
-//      "--query" ,"INCLUDE")
-
-    // TODO trait or something?
-    jc.getParsedCommand match {
-      case TableConfCommand.Command => tableConf.execute()
-      case ListCommand.Command      => listCom.execute()
-      case ExportCommand.Command    => export.execute()
-      case DeleteCommand.Command    => delete.execute()
-      case DescribeCommand.Command  => describe.execute()
+    try {
+      command.execute()
+    } catch {
+      case e: Exception => logger.error(e.getMessage, e)
     }
-
   }
 
   def mkSubCommand(parent: JCommander, name: String, obj: Object): JCommander = {
