@@ -7,7 +7,13 @@ import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 
 object FeatureCreator extends Logging {
 
-  def createFeature(ds: AccumuloDataStore, sftspec: String, featureName: String, dtField: Option[String], sharedTable: Option[Boolean], catalog: String, maxShards: Option[Int] = None): Unit = {
+  def createFeature(ds: AccumuloDataStore,
+                    sftspec: String,
+                    featureName: String,
+                    dtField: Option[String],
+                    sharedTable: Option[Boolean],
+                    catalog: String,
+                    maxShards: Option[Int] = None): Unit = {
     logger.info(s"Creating '$featureName' on catalog table '$catalog' with spec " +
       s"'$sftspec'. Just a few moments...")
 

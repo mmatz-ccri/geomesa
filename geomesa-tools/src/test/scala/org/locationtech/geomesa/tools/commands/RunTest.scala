@@ -9,7 +9,7 @@ class RunTest extends Specification {
 
   "Runner" should {
     "run list command" in {
-
+      success
     }
   }
 
