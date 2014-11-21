@@ -6,7 +6,8 @@ import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import javax.media.jai.remote.SerializableRenderedImage
 
-import org.geotools.coverage.grid.GridCoverage2D
+import org.geotools.coverage.grid.{GridCoverage2D, GridCoverageFactory}
+import org.opengis.geometry.Envelope
 
 object RasterUtils {
   val doubleSize = 8
@@ -70,5 +71,11 @@ object RasterUtils {
     }
     buffer.toByteArray
   }
+
+  val defaultGridCoverageFactory = new GridCoverageFactory
+
+  def renderedImageToGridCoverage2d(name: String, image: RenderedImage, env: Envelope) =
+    defaultGridCoverageFactory.create(name, image, env)
+
 }
 
