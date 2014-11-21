@@ -27,7 +27,6 @@ class CreateCommand(parent: JCommander) extends Command with Logging {
 object CreateCommand {
   val Command = "create"
 
-  // TODO common params here...extract into common class
   class CreateParams extends FeatureParams {
     @Parameter(names = Array("--spec", "-s"), description = "SimpleFeatureType specification", required = true)
     var spec: String = null

@@ -14,6 +14,7 @@ object Runner extends Logging {
     val export    = new ExportCommand(jc)
     val delete    = new DeleteCommand(jc)
     val describe  = new DescribeCommand(jc)
+    val ingest    = new IngestCommand(jc)
 
     val command: Command =
       jc.getParsedCommand match {
@@ -22,6 +23,7 @@ object Runner extends Logging {
         case ExportCommand.Command    => export
         case DeleteCommand.Command    => delete
         case DescribeCommand.Command  => describe
+        case IngestCommand.Command    => ingest
       }
 
     try {

@@ -54,7 +54,6 @@ class Ingest() extends Logging with AccumuloProperties {
         sys.exit()
     }
 
-
   }
 
   def getAccumuloDataStoreConf(config: IngestArguments, password: String) = Map (
@@ -160,79 +159,6 @@ class Ingest() extends Logging with AccumuloProperties {
 }
 
 object Ingest extends App with Logging with GetPassword {
-  val parser = new scopt.OptionParser[IngestArguments]("geomesa-tools ingest") {
-    implicit val optionStringRead: scopt.Read[Option[String]] = scopt.Read.reads(Option[String])
-    implicit val optionBooleanRead: scopt.Read[Option[Boolean]] = scopt.Read.reads(b => Option(b.toBoolean))
-    implicit val optionIntRead: scopt.Read[Option[Int]] = scopt.Read.reads(i => Option(i.toInt))
-    head("GeoMesa Tools Ingest", "1.0")
-    opt[String]('u', "username") action { (x, c) =>
-      c.copy(username = x) } text "Accumulo username" required()
-    opt[Option[String]]('p', "password") action { (x, c) =>
-      c.copy(password = x) } text "Accumulo password, This can also be provided after entering a command" optional()
-    opt[Option[String]]("instance-name").action { (s, c) =>
-      c.copy(instanceName = s) } text "Accumulo instance name" optional()
-    opt[Option[String]]('z', "zookeepers").action { (s, c) =>
-      c.copy(zookeepers = s) } text "Accumulo Zookeepers string" optional()
-    opt[String]('c', "catalog").action { (s, c) =>
-      c.copy(catalog = s) } text "the name of the Accumulo table to use -- or create" required()
-    opt[Option[String]]('a', "auths") action { (s, c) =>
-      c.copy(auths = s) } text "Accumulo auths (optional)" optional()
-    opt[Option[String]]('v', "visibilities") action { (s, c) =>
-      c.copy(visibilities = s) } text "Accumulo visibilities (optional)" optional()
-    opt[Option[String]]('i', "indexSchemaFormat") action { (s, c) =>
-      c.copy(indexSchemaFmt = s) } text "Accumulo index schema format (optional)" optional()
-    opt[Option[Int]]("shards") action { (i, c) =>
-      c.copy(maxShards = i) } text "Accumulo number of shards to use (optional)" optional()
-    opt[Option[Boolean]]("shared-tables") action { (x, c) =>
-      c.copy(sharedTable = x) } text "Set the Accumulo table sharing (default true)" optional()
-    opt[String]('f', "feature-name").action { (s, c) =>
-      c.copy(featureName = s) } text "the name of the feature" required()
-    opt[String]('s', "sftspec").action { (s, c) =>
-      c.copy(spec = s) } text "the sft specification of the file," +
-      " must match number and order of columns in ingest file (or columns list when --cols is specified) if csv or " +
-      "tsv formatted. If ingesting lat/lon column data an additional field for the point geometry must be added, " +
-      "ie: *geom:Point ." optional()
-    opt[Option[String]]("cols").action { (s, c) =>
-      c.copy(cols = s) } text "the set of column indexes to be ingested, must match" +
-      " sft specification " optional()
-    opt[Option[String]]("datetime").action { (s, c) =>
-      c.copy(dtField = s) } text "the name of the datetime field in the sft" optional()
-    opt[Option[String]]("dtformat").action { (s, c) =>
-      c.copy(dtFormat = s) } text "the format of the datetime field" optional()
-    opt[Option[String]]("idfields").action { (s, c) =>
-      c.copy(idFields = s) } text "the set of attributes of each feature used" +
-      " to encode the feature name" optional()
-    opt[Unit]('h', "hash").action { (_, c) =>
-      c.copy(doHash = true) } text "flag to md5 hash to identity of each feature" optional()
-    opt[Option[String]]("lon").action { (s, c) =>
-      c.copy(lonAttribute = s) } text "the name of the longitude field in the sft if ingesting point data" optional()
-    opt[Option[String]]("lat").action { (s, c) =>
-      c.copy(latAttribute = s) } text "the name of the latitude field in the sft if ingesting point data" optional()
-    opt[String]("file").action { (s, c) =>
-      c.copy(file = s) } text "the file to be ingested" required()
-    help("help").text("show help command")
-    checkConfig { c =>
-      if (c.maxShards.isDefined && c.indexSchemaFmt.isDefined) {
-        failure("Error: the options for setting the max shards and the indexSchemaFormat cannot both be set.")
-      } else {
-        success
-      }
-    }
-  }
-
-  try {
-    parser.parse(args, IngestArguments()).map { config =>
-      val pw = password(config.password)
-      val ingest = new Ingest()
-      ingest.defineIngestJob(config, pw)
-    } getOrElse {
-      logger.error("Error: command not recognized.")
-    }
-  }
-  catch {
-    case npe: NullPointerException => logger.error("Missing options and or unknown arguments on ingest." +
-                                                   "\n\t See 'geomesa ingest --help'", npe)
-  }
 
   def getFileExtension(file: String) = file.toLowerCase match {
     case csv if file.endsWith("csv") => "CSV"
