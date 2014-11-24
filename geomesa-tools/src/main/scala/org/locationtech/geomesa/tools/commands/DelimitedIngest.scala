@@ -8,10 +8,10 @@ import org.apache.accumulo.core.client.Connector
 import org.apache.hadoop.conf.Configuration
 import org.locationtech.geomesa.core.data.AccumuloDataStore
 import org.locationtech.geomesa.jobs.JobUtils
-import org.locationtech.geomesa.tools.Utils.IngestParams
-import org.locationtech.geomesa.tools.commands.IngestCommand.Formats._
-import org.locationtech.geomesa.tools.commands.IngestCommand.Modes._
-import org.locationtech.geomesa.tools.commands.IngestCommand.{IngestParameters, Modes}
+import org.locationtech.geomesa.tools.Utils.Formats._
+import org.locationtech.geomesa.tools.Utils.{IngestParams, Modes}
+import org.locationtech.geomesa.tools.Utils.Modes._
+import org.locationtech.geomesa.tools.commands.IngestCommand.IngestParameters
 import org.locationtech.geomesa.tools.{AccumuloProperties, FeatureCreator, SVIngest}
 
 import scala.io.Source

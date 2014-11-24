@@ -1,15 +1,82 @@
 package org.locationtech.geomesa.tools.commands
 
-import com.beust.jcommander.{JCommander, Parameter}
-import org.locationtech.geomesa.tools.Export
-import org.locationtech.geomesa.tools.commands.ExportCommand.{Command, ExportParams}
+import java.io.File
 
-class ExportCommand(parent: JCommander) extends Command {
+import com.beust.jcommander.{JCommander, Parameter}
+import com.typesafe.scalalogging.slf4j.Logging
+import org.geotools.data.Query
+import org.geotools.data.simple.SimpleFeatureCollection
+import org.geotools.filter.text.cql2.CQL
+import org.joda.time.DateTime
+import org.locationtech.geomesa.core.data.AccumuloFeatureStore
+import org.locationtech.geomesa.tools.Utils.Formats._
+import org.locationtech.geomesa.tools._
+import org.locationtech.geomesa.tools.commands.ExportCommand.{Command, ExportParams}
+import org.opengis.filter.Filter
+
+import scala.util.Try
+
+class ExportCommand(parent: JCommander) extends Command with Logging {
 
   val params = new ExportParams
   parent.addCommand(Command, params)
 
-  override def execute() = new Export(params).exportFeatures()
+  override def execute() = {
+
+    val fmt = params.format.toLowerCase()
+    val exporter: FeatureExporter = fmt match {
+      case CSV | TSV       =>
+        new DelimitedExport(fmt,
+          Option(params.attributes),
+          Option(params.idAttribute),
+          Option(params.latAttribute),
+          Option(params.lonAttribute),
+          Option(params.dateAttribute))
+      case SHP             => new ShapefileExport()
+      case GeoJson | JSON  => new GeoJsonExport()
+      case GML             => new GmlExport()
+      case _ =>
+        throw new IllegalArgumentException("Unsupported export format. Supported formats are shp, geojson, csv, and gml.")
+    }
+
+    val outFile = createUniqueFileName()
+    val features = getFeatureCollection()
+    exporter.write(features, outFile)
+  }
+
+  def getFeatureCollection(overrideAttributes: Option[String] = None): SimpleFeatureCollection = {
+    val filter = Option(params.cqlFilter).map(CQL.toFilter).getOrElse(Filter.INCLUDE)
+    val q = new Query(params.featureName, filter)
+    q.setMaxFeatures(Option(params.maxFeatures).getOrElse(Query.DEFAULT_MAX.asInstanceOf[Integer]).toInt)
+
+    val attributesO = if (overrideAttributes.isDefined) overrideAttributes
+    else if (Option(params.attributes).isDefined) Some(params.attributes)
+    else None
+    //Split attributes by "," meanwhile allowing to escape it by "\,".
+    attributesO.foreach { attributes =>
+      q.setPropertyNames(attributes.split("""(?<!\\),""").map(_.trim.replace("\\,", ",")))
+    }
+
+    // get the feature store used to query the GeoMesa data
+    val fs = new DataStoreStuff(params).ds.getFeatureSource(params.featureName).asInstanceOf[AccumuloFeatureStore]
+
+    // and execute the query
+    Try(fs.getFeatures(q)).getOrElse{
+      logger.error("Error: Could not create a SimpleFeatureCollection to export. Please ensure " +
+        "that all arguments are correct in the previous command.")
+      sys.exit()
+    }
+  }
+
+  // TODO examine this method
+  def createUniqueFileName(): File = {
+    var outputPath: File = null
+    do {
+      if (outputPath != null) { Thread.sleep(1) }
+      outputPath = new File(s"${System.getProperty("user.dir")}/${params.catalog}_${params.featureName}_${DateTime.now()}.${params.format}")
+    } while (outputPath.exists)
+    outputPath
+  }
 
 }
 

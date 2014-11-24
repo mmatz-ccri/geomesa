@@ -4,8 +4,8 @@ import java.io.File
 
 import com.beust.jcommander.{JCommander, Parameter}
 import com.typesafe.scalalogging.slf4j.Logging
+import org.locationtech.geomesa.tools.Utils.Formats._
 import org.locationtech.geomesa.tools._
-import org.locationtech.geomesa.tools.commands.IngestCommand.Formats._
 import org.locationtech.geomesa.tools.commands.IngestCommand._
 
 class IngestCommand(parent: JCommander) extends Command with Logging {
@@ -26,31 +26,6 @@ class IngestCommand(parent: JCommander) extends Command with Logging {
 
 object IngestCommand {
   val Command = "ingest"
-
-  object Formats {
-    val CSV = "csv"
-    val TSV = "tsv"
-    val SHP = "shp"
-
-    //TODO include dot in extension
-    def getFileExtension(f: File) = {
-      val name = f.getName.toLowerCase
-      name match {
-        case csv if name.endsWith(CSV) => CSV
-        case tsv if name.endsWith(TSV) => TSV
-        case shp if name.endsWith(SHP) => SHP
-        case _                         => "unknown"
-      }
-    }
-  }
-
-  object Modes {
-    val Local = "local"
-    val Hdfs = "hdfs"
-
-    def getMode(f: File) = if (f.getName.toLowerCase.trim.startsWith("hdfs://")) Hdfs else Local
-    def getModeFlag(f: File) = "--" + getMode(f)
-  }
 
   class IngestParameters extends CreateParams {
     @Parameter(names = Array("--indexSchema"), description = "GeoMesa index schema format string")

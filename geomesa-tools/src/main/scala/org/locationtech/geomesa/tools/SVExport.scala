@@ -36,25 +36,25 @@ import org.locationtech.geomesa.utils.geotools.Conversions._
 import scala.collection.JavaConversions._
 import scala.util.Try
 
-object SVExport extends App with Logging {
+//object SVExport extends App with Logging {
+//
+//  // replace this with your load specification
+//  val load: LoadAttributes = null
+//
+//  val params = Map("instanceId"    -> "mycloud",
+//                    "zookeepers"   -> "zoo1,zoo2,zoo3",
+//                    "user"         -> "user",
+//                    "password"     -> "password",
+//                    "auths"        -> "",
+//                    "visibilities" -> "",
+//                    "tableName"    -> load.table)
+//
+//  val extractor = new SVExport(load, params)
+//  val features = extractor.queryFeatures()
+//  extractor.writeFeatures(features)
+//}
 
-  // replace this with your load specification
-  val load: LoadAttributes = null
-
-  val params = Map("instanceId"    -> "mycloud",
-                    "zookeepers"   -> "zoo1,zoo2,zoo3",
-                    "user"         -> "user",
-                    "password"     -> "password",
-                    "auths"        -> "",
-                    "visibilities" -> "",
-                    "tableName"    -> load.table)
-
-  val extractor = new SVExport(load, params)
-  val features = extractor.queryFeatures()
-  extractor.writeFeatures(features)
-}
-
-class SVExport(load: LoadAttributes, params: Map[_,_]) extends Logging {
+class SVExport(load: LoadAttributes) extends Logging {
 
   lazy val dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
@@ -163,24 +163,24 @@ class SVExport(load: LoadAttributes, params: Map[_,_]) extends Logging {
     if (!load.toStdOut) { logger.info(s"Successfully wrote $count features to '${outputPath.toString}'") }
   }
 
-  /**
-   *
-   * @return
-   */
-  def queryFeatures(): SimpleFeatureIterator = {
-
-    logger.debug("querying")
-
-    val ds = DataStoreFinder.getDataStore(params).asInstanceOf[AccumuloDataStore]
-
-    val query = new Query(load.name, CQL.toFilter(load.query))
-
-    // get the feature store used to query the GeoMesa data
-    val featureStore = ds.getFeatureSource(load.name).asInstanceOf[AccumuloFeatureStore]
-
-    // execute the query
-    featureStore.getFeatures(query).features()
-  }
+//  /**
+//   *
+//   * @return
+//   */
+//  def queryFeatures(): SimpleFeatureIterator = {
+//
+//    logger.debug("querying")
+//
+//    val ds = DataStoreFinder.getDataStore(params).asInstanceOf[AccumuloDataStore]
+//
+//    val query = new Query(load.name, CQL.toFilter(load.query))
+//
+//    // get the feature store used to query the GeoMesa data
+//    val featureStore = ds.getFeatureSource(load.name).asInstanceOf[AccumuloFeatureStore]
+//
+//    // execute the query
+//    featureStore.getFeatures(query).features()
+//  }
 }
 
 case class LoadAttributes(name: String,

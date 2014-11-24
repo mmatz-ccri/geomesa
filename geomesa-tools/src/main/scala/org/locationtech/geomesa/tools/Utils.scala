@@ -16,6 +16,7 @@
 
 package org.locationtech.geomesa.tools
 
+import java.io.File
 import java.util.UUID
 
 import com.typesafe.scalalogging.slf4j.Logging
@@ -31,7 +32,7 @@ import scala.xml.XML
  *  classes where commands get executed.
  */
 
-object Utils extends Logging {
+object Utils {
 
   object IngestParams {
     val ACCUMULO_INSTANCE   = "geomesa.tools.ingest.instance"
@@ -57,7 +58,36 @@ object Utils extends Logging {
     val SFT_SPEC            = "geomesa.tools.feature.sftspec"
     val COLS                = "geomesa.tools.ingest.cols"
     val IS_TEST_INGEST      = "geomesa.tools.ingest.runIngest"
+  }
 
+  object Formats {
+    val CSV     = "csv"
+    val TSV     = "tsv"
+    val SHP     = "shp"
+    val JSON    = "json"
+    val GeoJson = "geojson"
+    val GML     = "gml"
+
+    //TODO include dot in extension
+    def getFileExtension(f: File) = {
+      val name = f.getName.toLowerCase
+      name match {
+        case csv if name.endsWith(CSV)   => CSV
+        case tsv if name.endsWith(TSV)   => TSV
+        case shp if name.endsWith(SHP)   => SHP
+        case json if name.endsWith(JSON) => JSON
+        case gml if name.endsWith(GML)   => GML
+        case _                           => "unknown"
+      }
+    }
+  }
+
+  object Modes {
+    val Local = "local"
+    val Hdfs = "hdfs"
+
+    def getMode(f: File) = if (f.getName.toLowerCase.trim.startsWith("hdfs://")) Hdfs else Local
+    def getModeFlag(f: File) = "--" + getMode(f)
   }
 
 }
