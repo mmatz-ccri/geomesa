@@ -23,7 +23,7 @@ import com.typesafe.scalalogging.slf4j.Logging
 import org.apache.accumulo.core.client.ZooKeeperInstance
 import org.apache.hadoop.fs.Path
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import scala.xml.XML
 
 /**
@@ -68,7 +68,6 @@ object Utils {
     val GeoJson = "geojson"
     val GML     = "gml"
 
-    //TODO include dot in extension
     def getFileExtension(f: File) = {
       val name = f.getName.toLowerCase
       name match {
@@ -84,7 +83,7 @@ object Utils {
 
   object Modes {
     val Local = "local"
-    val Hdfs = "hdfs"
+    val Hdfs  = "hdfs"
 
     def getMode(f: File) = if (f.getName.toLowerCase.trim.startsWith("hdfs://")) Hdfs else Local
     def getModeFlag(f: File) = "--" + getMode(f)
@@ -92,38 +91,35 @@ object Utils {
 
 }
 
-/* get password trait */
-trait GetPassword {
-  def password(s: Option[String]) = s.getOrElse({
-    val standardIn = System.console()
-    print("Password> ")
-    standardIn.readPassword().mkString
-  })
-}
-
-/* Accumulo properties trait */
+/**
+ * Loads accumulo properties for instance and zookeepers from the accumulo installation found via
+ * the system path in ACCUMULO_HOME in the case that command line parameters are not provided
+ */
 trait AccumuloProperties extends Logging {
   lazy val accumuloConf = XML.loadFile(s"${System.getenv("ACCUMULO_HOME")}/conf/accumulo-site.xml")
 
-  lazy val zookeepersProp = (accumuloConf \\ "property")
-    .filter(x => (x \ "name")
-    .text == "instance.zookeeper.host")
-    .map(y => (y \ "value").text)
+  lazy val zookeepersProp =
+    (accumuloConf \\ "property")
+    .filter { x => (x \ "name").text == "instance.zookeeper.host" }
+    .map { y => (y \ "value").text }
     .head
 
-  lazy val instanceDfsDir = Try((accumuloConf \\ "property")
-    .filter(x => (x \ "name")
-    .text == "instance.dfs.dir")
-    .map(y => (y \ "value").text)
-    .head)
+  lazy val instanceDfsDir =
+    Try(
+      (accumuloConf \\ "property")
+      .filter { x => (x \ "name").text == "instance.dfs.dir" }
+      .map { y => (y \ "value").text }
+      .head)
     .getOrElse("/accumulo")
 
-  lazy val instanceIdStr = Try(ZooKeeperInstance.getInstanceIDFromHdfs(new Path(instanceDfsDir, "instance_id"))).getOrElse({
-    throw new Exception(
-      "Error retrieving /accumulo/instance_id from HDFS. To resolve this, double check that the \n" +
-      "HADOOP_CONF_DIR environment variable is set. If that does not work, specify your \n" +
-      "Accumulo Instance Name as an argument with the --instance-name flag.")
-  })
+  lazy val instanceIdStr =
+    Try(ZooKeeperInstance.getInstanceIDFromHdfs(new Path(instanceDfsDir, "instance_id"))) match {
+      case Success(value) => value
+      case Failure(ex) =>
+        throw new Exception("Error retrieving /accumulo/instance_id from HDFS. To resolve this, double check that " +
+          "the HADOOP_CONF_DIR environment variable is set. If that does not work, specify your Accumulo Instance " +
+          "Name as an argument with the --instance-name flag.", ex)
+    }
 
   lazy val instanceName = new ZooKeeperInstance(UUID.fromString(instanceIdStr), zookeepersProp).getInstanceName
 }
