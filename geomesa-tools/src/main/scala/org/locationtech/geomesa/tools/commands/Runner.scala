@@ -15,6 +15,8 @@ object Runner extends Logging {
     val delete    = new DeleteCommand(jc)
     val describe  = new DescribeCommand(jc)
     val ingest    = new IngestCommand(jc)
+    val create    = new CreateCommand(jc)
+    val explain   = new ExplainCommand(jc)
 
     val command: Command =
       jc.getParsedCommand match {
@@ -24,6 +26,8 @@ object Runner extends Logging {
         case DeleteCommand.Command    => delete
         case DescribeCommand.Command  => describe
         case IngestCommand.Command    => ingest
+        case CreateCommand.Command    => create
+        case ExplainCommand.Command   => explain
       }
 
     try {

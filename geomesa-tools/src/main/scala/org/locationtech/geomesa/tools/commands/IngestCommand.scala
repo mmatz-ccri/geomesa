@@ -16,7 +16,7 @@ class IngestCommand(parent: JCommander) extends Command with Logging {
   override def execute(): Unit =
     getFileExtension(params.file) match {
       case CSV | TSV => new DelimitedIngest(params).run()
-      case SHP       => ShpIngest.doIngest(params)
+      case SHP       => new ShpIngest(params).run()
       case _         =>
         logger.error("Error: File format not supported for file " + params.file.getPath + ". Supported formats" +
           "are csv,tsv,shp")
