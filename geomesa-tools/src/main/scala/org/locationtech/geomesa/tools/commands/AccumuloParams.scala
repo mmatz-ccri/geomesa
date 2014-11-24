@@ -37,3 +37,17 @@ class CqlParams extends FeatureParams{
   @Parameter(names = Array("-q", "--query", "--filter"), description = "CQL Filter to use for the query explain", required = true)
   var cqlFilter: String = null
 }
+
+class CreateParams extends FeatureParams {
+  @Parameter(names = Array("--spec", "-s"), description = "SimpleFeatureType specification", required = true)
+  var spec: String = null
+
+  @Parameter(names = Array("--dtField", "-d"), description = "DateTime field name to use as the default dtg", required = false)
+  var dtgField: String = null
+
+  @Parameter(names = Array("--useSharedTables"), description = "Use shared tables in Accumulo for feature storage (default false)")
+  var useSharedTables: Boolean = true
+
+  @Parameter(names = Array("--shards"), description = "Number of shards to use for the storage tables (defaults to number of tservers)")
+  var numShards: Integer = null
+}

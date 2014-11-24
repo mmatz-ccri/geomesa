@@ -23,12 +23,48 @@ import org.geotools.data.shapefile.ShapefileDataStoreFactory
 import org.geotools.data.{DataStoreFinder, Transaction}
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder
 import org.geotools.filter.identity.FeatureIdImpl
+import org.locationtech.geomesa.tools.commands.DataStoreStuff
+import org.locationtech.geomesa.tools.commands.IngestCommand.IngestParameters
 import org.locationtech.geomesa.utils.geotools.Conversions._
 import org.opengis.feature.simple.SimpleFeature
 
 import scala.collection.JavaConversions._
 
 object ShpIngest extends Logging {
+
+  def doIngest(params: IngestParameters) = {
+    val fileUrl = params.file.toURI.toURL
+    val shpParams = Map(ShapefileDataStoreFactory.URLP.getName -> fileUrl)
+    val shpDataStore = DataStoreFinder.getDataStore(shpParams)
+    val featureTypeName = shpDataStore.getTypeNames.head
+    val featureSource = shpDataStore.getFeatureSource(featureTypeName)
+
+    val ds = new DataStoreStuff(params).ds
+
+    val targetTypeName = if (params.featureName != null) params.featureName else featureTypeName
+
+    if(ds.getSchema(targetTypeName) != null) {
+      logger.error("Type name already exists")
+      false
+    }
+    else {
+      // create the new feature type
+      val builder = new SimpleFeatureTypeBuilder()
+      builder.init(featureSource.getSchema)
+      builder.setName(targetTypeName)
+      val targetType = builder.buildFeatureType()
+
+      ds.createSchema(targetType)
+      val writer = ds.getFeatureWriterAppend(targetTypeName, Transaction.AUTO_COMMIT)
+      featureSource.getFeatures.features.foreach { f =>
+        val toWrite = writer.next()
+        copyFeature(f, toWrite)
+        writer.write()
+      }
+      writer.close()
+      true
+    }
+  }
   
   def doIngest(config: IngestArguments, dsConf: Map[String, _]): Boolean = {
     val fileUrl = new File(config.file).toURI.toURL
@@ -66,6 +102,7 @@ object ShpIngest extends Logging {
     }
   }
 
+  // todo Hints?
   def copyFeature(from: SimpleFeature, to: SimpleFeature): Unit = {
     from.getAttributes.zipWithIndex.foreach { case (attr, idx) => to.setAttribute(idx, attr) }
     to.setDefaultGeometry(from.getDefaultGeometry)

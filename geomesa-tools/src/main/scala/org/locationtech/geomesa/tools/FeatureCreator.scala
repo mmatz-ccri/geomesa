@@ -3,9 +3,26 @@ package org.locationtech.geomesa.tools
 import com.typesafe.scalalogging.slf4j.Logging
 import org.locationtech.geomesa.core.data.AccumuloDataStore
 import org.locationtech.geomesa.core.index._
+import org.locationtech.geomesa.tools.commands.{CreateParams, DataStoreStuff}
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 
 object FeatureCreator extends Logging {
+
+  def createFeature(params: CreateParams): Unit = {
+    val ds = new DataStoreStuff(params).ds
+    createFeature(ds, params)
+  }
+
+  def createFeature(ds: AccumuloDataStore, params: CreateParams): Unit =
+    createFeature(
+      ds,
+      params.spec,
+      params.featureName,
+      Option(params.dtgField),
+      Option(params.useSharedTables),
+      params.catalog,
+      Option(params.numShards))
+
 
   def createFeature(ds: AccumuloDataStore,
                     sftspec: String,
