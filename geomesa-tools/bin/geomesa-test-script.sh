@@ -1,5 +1,4 @@
 #! /usr/bin/env bash
-#! /usr/bin/env bash
 #
 # Copyright 2014 Commonwealth Computer Research, Inc.
 #
