@@ -21,7 +21,7 @@ import org.geotools.data.shapefile.ShapefileDataStoreFactory
 import org.geotools.data.{DataStoreFinder, Transaction}
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder
 import org.geotools.filter.identity.FeatureIdImpl
-import org.locationtech.geomesa.tools.DataStoreStuff
+import org.locationtech.geomesa.tools.DataStoreHelper
 import org.locationtech.geomesa.tools.ShpIngest._
 import org.locationtech.geomesa.tools.commands.IngestCommand.IngestParameters
 import org.locationtech.geomesa.utils.geotools.Conversions._
@@ -41,7 +41,7 @@ class ShpIngest(params: IngestParameters) extends Logging {
     val featureTypeName = shpDataStore.getTypeNames.head
     val featureSource = shpDataStore.getFeatureSource(featureTypeName)
 
-    val ds = new DataStoreStuff(params).ds
+    val ds = new DataStoreHelper(params).ds
 
     val targetTypeName = if (params.featureName != null) params.featureName else featureTypeName
 

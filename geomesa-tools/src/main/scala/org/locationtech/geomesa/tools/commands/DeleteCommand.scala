@@ -17,7 +17,7 @@ package org.locationtech.geomesa.tools.commands
 
 import com.beust.jcommander.{JCommander, Parameter}
 import com.typesafe.scalalogging.slf4j.Logging
-import org.locationtech.geomesa.tools.DataStoreStuff
+import org.locationtech.geomesa.tools.DataStoreHelper
 import org.locationtech.geomesa.tools.commands.DeleteCommand._
 
 class DeleteCommand(parent: JCommander) extends Command with Logging {
@@ -41,7 +41,7 @@ class DeleteCommand(parent: JCommander) extends Command with Logging {
       println(s"Deleting '$catalog:$feature'. This will take longer " +
         "than other commands to complete. Just a few moments...")
       try {
-        val ds = new DataStoreStuff(params).ds
+        val ds = new DataStoreHelper(params).ds
         ds.removeSchema(feature)
         if (!ds.getNames.contains(feature)) {
           println(s"Feature '$catalog:$feature' successfully deleted.")

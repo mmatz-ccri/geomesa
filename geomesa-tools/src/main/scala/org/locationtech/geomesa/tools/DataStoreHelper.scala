@@ -24,7 +24,7 @@ import scala.collection.JavaConversions._
 import scala.util.{Failure, Success, Try}
 
 
-class DataStoreStuff(params: GeoMesaParams) extends AccumuloProperties {
+class DataStoreHelper(params: GeoMesaParams) extends AccumuloProperties {
   lazy val instance = Option(params.instance).getOrElse(instanceName)
   lazy val zookeepersString = Option(params.zookeepers).getOrElse(zookeepersProp)
 

@@ -20,7 +20,7 @@ import com.typesafe.scalalogging.slf4j.Logging
 import org.geotools.data.{Query, Transaction}
 import org.geotools.filter.text.ecql.ECQL
 import org.locationtech.geomesa.core.data.AccumuloFeatureReader
-import org.locationtech.geomesa.tools.DataStoreStuff
+import org.locationtech.geomesa.tools.DataStoreHelper
 import org.locationtech.geomesa.tools.commands.ExplainCommand.Command
 
 class ExplainCommand(parent: JCommander) extends Command with Logging {
@@ -31,7 +31,7 @@ class ExplainCommand(parent: JCommander) extends Command with Logging {
   override def execute() =
     try {
       val q = new Query(params.featureName, ECQL.toFilter(params.cqlFilter))
-      val ds = new DataStoreStuff(params).ds
+      val ds = new DataStoreHelper(params).ds
       val t = Transaction.AUTO_COMMIT
       val afr = ds.getFeatureReader(q, t).asInstanceOf[AccumuloFeatureReader]
       afr.explainQuery(q)

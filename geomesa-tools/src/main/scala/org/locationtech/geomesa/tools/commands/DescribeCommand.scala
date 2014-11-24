@@ -18,7 +18,7 @@ package org.locationtech.geomesa.tools.commands
 import com.beust.jcommander.JCommander
 import com.typesafe.scalalogging.slf4j.Logging
 import org.locationtech.geomesa.core.data.extractDtgField
-import org.locationtech.geomesa.tools.DataStoreStuff
+import org.locationtech.geomesa.tools.DataStoreHelper
 import org.locationtech.geomesa.tools.commands.DescribeCommand._
 import org.opengis.feature.`type`.AttributeDescriptor
 
@@ -32,7 +32,7 @@ class DescribeCommand(parent: JCommander) extends Command with Logging {
   def execute() = {
     println(s"Describing attributes of feature '${params.featureName}' from catalog table '${params.catalog}'...")
     try {
-      val ds = new DataStoreStuff(params).ds
+      val ds = new DataStoreHelper(params).ds
       val sft = ds.getSchema(params.featureName)
 
       def isIndexed(attr: AttributeDescriptor) =

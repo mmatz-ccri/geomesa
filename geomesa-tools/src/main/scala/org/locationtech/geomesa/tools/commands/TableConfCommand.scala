@@ -20,7 +20,7 @@ import com.typesafe.scalalogging.slf4j.Logging
 import org.apache.accumulo.core.client.TableNotFoundException
 import org.apache.accumulo.core.client.admin.TableOperations
 import org.locationtech.geomesa.core.data.AccumuloDataStore
-import org.locationtech.geomesa.tools.{DataStoreStuff, Runner}
+import org.locationtech.geomesa.tools.{DataStoreHelper, Runner}
 import org.locationtech.geomesa.tools.Runner.mkSubCommand
 import org.locationtech.geomesa.tools.commands.TableConfCommand._
 
@@ -40,7 +40,7 @@ class TableConfCommand(parent: JCommander) extends Command with Logging {
   def execute() = {
     jcTableConf.getParsedCommand match {
       case ListSubCommand =>
-        implicit val ds = new DataStoreStuff(tcListParams).ds
+        implicit val ds = new DataStoreHelper(tcListParams).ds
         implicit val tableOps = ds.connector.tableOperations()
         implicit val tableName = getTableName(tcListParams)
 
@@ -48,7 +48,7 @@ class TableConfCommand(parent: JCommander) extends Command with Logging {
         getProperties().foreach(println)
 
       case DescribeSubCommand =>
-        implicit val ds = new DataStoreStuff(tcDescParams).ds
+        implicit val ds = new DataStoreHelper(tcDescParams).ds
         implicit val tableOps = ds.connector.tableOperations()
         implicit val tableName = getTableName(tcDescParams)
 
@@ -61,7 +61,7 @@ class TableConfCommand(parent: JCommander) extends Command with Logging {
         }
 
       case UpdateDommand =>
-        implicit val ds = new DataStoreStuff(tcUpdateParams).ds
+        implicit val ds = new DataStoreHelper(tcUpdateParams).ds
         implicit val tableOps = ds.connector.tableOperations()
         implicit val tableName = getTableName(tcUpdateParams)
         val param = tcUpdateParams.param

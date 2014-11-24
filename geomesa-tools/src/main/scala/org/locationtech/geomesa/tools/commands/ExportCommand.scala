@@ -73,7 +73,7 @@ class ExportCommand(parent: JCommander) extends Command with Logging {
     }
 
     // get the feature store used to query the GeoMesa data
-    val fs = new DataStoreStuff(params).ds.getFeatureSource(params.featureName).asInstanceOf[AccumuloFeatureStore]
+    val fs = new DataStoreHelper(params).ds.getFeatureSource(params.featureName).asInstanceOf[AccumuloFeatureStore]
 
     // and execute the query
     Try(fs.getFeatures(q)).getOrElse{
