@@ -21,6 +21,9 @@ class AccumuloParams {
 
   @Parameter(names = Array("--visibilities"), description = "Accumulo scan visibilities")
   var visibilities: String = null
+
+  @Parameter(names = Array("--mock"), description = "Run everything with a mock accumulo instance instead of a real one")
+  var useMock: Boolean = false
 }
 
 class GeoMesaParams extends AccumuloParams {

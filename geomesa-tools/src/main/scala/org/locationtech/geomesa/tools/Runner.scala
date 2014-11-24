@@ -1,7 +1,8 @@
-package org.locationtech.geomesa.tools.commands
+package org.locationtech.geomesa.tools
 
 import com.beust.jcommander.JCommander
 import com.typesafe.scalalogging.slf4j.Logging
+import org.locationtech.geomesa.tools.commands._
 
 object Runner extends Logging {
 

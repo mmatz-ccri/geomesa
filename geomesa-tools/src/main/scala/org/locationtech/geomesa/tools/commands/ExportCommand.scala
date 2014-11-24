@@ -62,9 +62,8 @@ class ExportCommand(parent: JCommander) extends Command with Logging {
 
     // and execute the query
     Try(fs.getFeatures(q)).getOrElse{
-      logger.error("Error: Could not create a SimpleFeatureCollection to export. Please ensure " +
+      throw new Exception("Error: Could not create a SimpleFeatureCollection to export. Please ensure " +
         "that all arguments are correct in the previous command.")
-      sys.exit()
     }
   }
 

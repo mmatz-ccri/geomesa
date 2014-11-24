@@ -119,11 +119,10 @@ trait AccumuloProperties extends Logging {
     .getOrElse("/accumulo")
 
   lazy val instanceIdStr = Try(ZooKeeperInstance.getInstanceIDFromHdfs(new Path(instanceDfsDir, "instance_id"))).getOrElse({
-    logger.error(
+    throw new Exception(
       "Error retrieving /accumulo/instance_id from HDFS. To resolve this, double check that the \n" +
       "HADOOP_CONF_DIR environment variable is set. If that does not work, specify your \n" +
       "Accumulo Instance Name as an argument with the --instance-name flag.")
-    sys.exit()
   })
 
   lazy val instanceName = new ZooKeeperInstance(UUID.fromString(instanceIdStr), zookeepersProp).getInstanceName
