@@ -9,6 +9,7 @@ class RunTest extends Specification {
 
   "Runner" should {
     "run list command" in {
+      // TODO test all the commands here?
       success
     }
   }
