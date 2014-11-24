@@ -18,7 +18,7 @@ package org.locationtech.geomesa.tools
 import com.typesafe.scalalogging.slf4j.Logging
 import org.locationtech.geomesa.core.data.AccumuloDataStore
 import org.locationtech.geomesa.core.index._
-import org.locationtech.geomesa.tools.commands.{CreateParams, DataStoreStuff}
+import org.locationtech.geomesa.tools.commands.CreateParams
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 
 object FeatureCreator extends Logging {

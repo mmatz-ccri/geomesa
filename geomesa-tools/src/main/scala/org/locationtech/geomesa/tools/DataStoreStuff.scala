@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.locationtech.geomesa.tools.commands
+package org.locationtech.geomesa.tools
 
 import org.geotools.data.DataStoreFinder
 import org.locationtech.geomesa.core.data.AccumuloDataStore
 import org.locationtech.geomesa.core.data.AccumuloDataStoreFactory.{params => dsParams}
-import org.locationtech.geomesa.tools.AccumuloProperties
+import org.locationtech.geomesa.tools.commands.GeoMesaParams
 
 import scala.collection.JavaConversions._
 import scala.util.{Failure, Success, Try}

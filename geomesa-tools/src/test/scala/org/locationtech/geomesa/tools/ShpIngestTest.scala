@@ -10,7 +10,7 @@ import org.geotools.data.shapefile.ShapefileDataStoreFactory
 import org.geotools.factory.Hints
 import org.geotools.geometry.jts.JTSFactoryFinder
 import org.junit.runner.RunWith
-import org.locationtech.geomesa.tools.commands.DataStoreStuff
+import org.locationtech.geomesa.tools.DataStoreStuff
 import org.locationtech.geomesa.tools.commands.IngestCommand.IngestParameters
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.specs2.mutable.Specification

@@ -17,6 +17,7 @@ package org.locationtech.geomesa.tools.commands
 
 import com.beust.jcommander.{JCommander, Parameter}
 import com.typesafe.scalalogging.slf4j.Logging
+import org.locationtech.geomesa.tools.DataStoreStuff
 import org.locationtech.geomesa.tools.commands.DeleteCommand._
 
 class DeleteCommand(parent: JCommander) extends Command with Logging {

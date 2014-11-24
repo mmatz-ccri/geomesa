@@ -20,7 +20,7 @@ import com.typesafe.scalalogging.slf4j.Logging
 import org.apache.accumulo.core.client.TableNotFoundException
 import org.apache.accumulo.core.client.admin.TableOperations
 import org.locationtech.geomesa.core.data.AccumuloDataStore
-import org.locationtech.geomesa.tools.Runner
+import org.locationtech.geomesa.tools.{DataStoreStuff, Runner}
 import org.locationtech.geomesa.tools.Runner.mkSubCommand
 import org.locationtech.geomesa.tools.commands.TableConfCommand._
 

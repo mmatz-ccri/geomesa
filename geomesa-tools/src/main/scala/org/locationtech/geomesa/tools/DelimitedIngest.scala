@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.locationtech.geomesa.tools.commands
+package org.locationtech.geomesa.tools
 
 import java.io.File
 import java.net.URLEncoder
@@ -27,7 +27,6 @@ import org.locationtech.geomesa.tools.Utils.Formats._
 import org.locationtech.geomesa.tools.Utils.Modes._
 import org.locationtech.geomesa.tools.Utils.{IngestParams, Modes}
 import org.locationtech.geomesa.tools.commands.IngestCommand.IngestParameters
-import org.locationtech.geomesa.tools.{AccumuloProperties, FeatureCreator, SVIngest}
 
 import scala.io.Source
 import scala.util.Try

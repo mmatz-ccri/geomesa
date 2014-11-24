@@ -16,6 +16,7 @@
 package org.locationtech.geomesa.tools.commands
 
 import com.beust.jcommander.JCommander
+import org.locationtech.geomesa.tools.DataStoreStuff
 import org.locationtech.geomesa.tools.commands.ListCommand._
 
 // TODO consider the former -quiet option...?

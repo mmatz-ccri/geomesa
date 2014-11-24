@@ -21,8 +21,8 @@ import org.geotools.data.shapefile.ShapefileDataStoreFactory
 import org.geotools.data.{DataStoreFinder, Transaction}
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder
 import org.geotools.filter.identity.FeatureIdImpl
+import org.locationtech.geomesa.tools.DataStoreStuff
 import org.locationtech.geomesa.tools.ShpIngest._
-import org.locationtech.geomesa.tools.commands.DataStoreStuff
 import org.locationtech.geomesa.tools.commands.IngestCommand.IngestParameters
 import org.locationtech.geomesa.utils.geotools.Conversions._
 import org.opengis.feature.simple.SimpleFeature

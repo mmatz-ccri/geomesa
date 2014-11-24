@@ -20,6 +20,7 @@ import com.typesafe.scalalogging.slf4j.Logging
 import org.geotools.data.{Query, Transaction}
 import org.geotools.filter.text.ecql.ECQL
 import org.locationtech.geomesa.core.data.AccumuloFeatureReader
+import org.locationtech.geomesa.tools.DataStoreStuff
 import org.locationtech.geomesa.tools.commands.ExplainCommand.Command
 
 class ExplainCommand(parent: JCommander) extends Command with Logging {
