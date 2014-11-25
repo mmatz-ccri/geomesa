@@ -19,7 +19,7 @@ import com.beust.jcommander.{JCommander, Parameter, Parameters}
 import com.typesafe.scalalogging.slf4j.Logging
 import org.apache.accumulo.core.client.TableNotFoundException
 import org.apache.accumulo.core.client.admin.TableOperations
-import org.locationtech.geomesa.core.data.AccumuloDataStore
+import org.locationtech.geomesa.core.data.{TableSuffix, AccumuloDataStore}
 import org.locationtech.geomesa.tools.{DataStoreHelper, Runner}
 import org.locationtech.geomesa.tools.Runner.mkSubCommand
 import org.locationtech.geomesa.tools.commands.TableConfCommand._
@@ -103,19 +103,19 @@ class TableConfCommand(parent: JCommander) extends Command with Logging {
 
   def getTableName(params: ListParams)(implicit ds: AccumuloDataStore) =
     params.suffix match {
-      case "st_idx"   => ds.getSpatioTemporalIdxTableName(params.featureName)
-      case "attr_idx" => ds.getAttrIdxTableName(params.featureName)
-      case "records"  => ds.getRecordTableForType(params.featureName)
-      case _          => throw new Exception(s"Invalid table suffix: ${params.suffix}")
+      case TableSuffix.STIdx   => ds.getSpatioTemporalIdxTableName(params.featureName)
+      case TableSuffix.AttrIdx => ds.getAttrIdxTableName(params.featureName)
+      case TableSuffix.Records => ds.getRecordTableForType(params.featureName)
+      case _                   => throw new Exception(s"Invalid table suffix: ${params.suffix}")
     }
 
 }
 
 object TableConfCommand {
-  val Command = "tableconf"
-  val ListSubCommand = "list"
+  val Command            = "tableconf"
+  val ListSubCommand     = "list"
   val DescribeSubCommand = "describe"
-  val UpdateDommand = "update"
+  val UpdateDommand      = "update"
 
   @Parameters(commandDescription = "Perform table configuration operations")
   class TableConfParams {}
@@ -124,7 +124,6 @@ object TableConfCommand {
   class ListParams extends FeatureParams {
     @Parameter(names = Array("--suffix", "-s"), description = "Table suffix to operate on (attr_idx, st_idx, or records)", required = true)
     var suffix: String = null
-
   }
 
   @Parameters(commandDescription = "Describe a given configuration parameter for a table")
@@ -139,4 +138,3 @@ object TableConfCommand {
     var newValue: String = null
   }
 }
-
