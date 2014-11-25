@@ -105,9 +105,6 @@ object ExportCommand {
     @Parameter(names = Array("--maxFeatures", "-m"), description = "Maximum number of features to return. default: Long.MaxValue")
     var maxFeatures: Integer = Int.MaxValue
 
-    @Parameter(names = Array("--stdout", "-s"), description = "flag to force export to std out")
-    var stdOut: Boolean = false
-
     @Parameter(names = Array("--attributes", "-a"), description = "Attributes from feature to export " +
       "(comma-separated)...Comma-separated expressions with each in the format " +
       "attribute[=filter_function_expression]|derived-attribute=filter_function_expression. " +
