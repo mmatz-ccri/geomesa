@@ -24,7 +24,9 @@ object Runner extends Logging {
   object MainArgs {}
 
   def main(args: Array[String]): Unit = {
-    val jc        = new JCommander(MainArgs, args.toArray: _*)
+    val jc = new JCommander(MainArgs, args.toArray: _*)
+    jc.setProgramName("geomesa")
+        
     val tableConf = new TableConfCommand(jc)
     val listCom   = new ListCommand(jc)
     val export    = new ExportCommand(jc)
@@ -33,6 +35,7 @@ object Runner extends Logging {
     val ingest    = new IngestCommand(jc)
     val create    = new CreateCommand(jc)
     val explain   = new ExplainCommand(jc)
+    val help      = new HelpCommand(jc)
 
     val command: Command =
       jc.getParsedCommand match {
@@ -44,6 +47,7 @@ object Runner extends Logging {
         case IngestCommand.Command    => ingest
         case CreateCommand.Command    => create
         case ExplainCommand.Command   => explain
+        case _                        => help
       }
 
     try {
