@@ -15,14 +15,14 @@
  */
 package org.locationtech.geomesa.tools.commands
 
-import com.beust.jcommander.JCommander
+import com.beust.jcommander.{JCommander, Parameters}
 import com.typesafe.scalalogging.slf4j.Logging
 import org.locationtech.geomesa.tools.FeatureCreator
-import org.locationtech.geomesa.tools.commands.CreateCommand.Command
+import org.locationtech.geomesa.tools.commands.CreateCommand.{Command, CreateParameters}
 
 class CreateCommand(parent: JCommander) extends Command with Logging {
 
-  val params = new CreateParams()
+  val params = new CreateParameters()
   parent.addCommand(Command, params)
 
   override def execute() = FeatureCreator.createFeature(params)
@@ -30,4 +30,7 @@ class CreateCommand(parent: JCommander) extends Command with Logging {
 
 object CreateCommand {
   val Command = "create"
+
+  @Parameters(commandDescription = "Create a feature definition in a GeoMesa catalog")
+  class CreateParameters extends CreateFeatureParams {}
 }

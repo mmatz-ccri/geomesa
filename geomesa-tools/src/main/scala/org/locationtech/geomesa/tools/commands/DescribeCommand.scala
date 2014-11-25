@@ -15,7 +15,7 @@
  */
 package org.locationtech.geomesa.tools.commands
 
-import com.beust.jcommander.JCommander
+import com.beust.jcommander.{JCommander, Parameters}
 import com.typesafe.scalalogging.slf4j.Logging
 import org.locationtech.geomesa.core.data.extractDtgField
 import org.locationtech.geomesa.tools.DataStoreHelper
@@ -26,7 +26,7 @@ import scala.collection.JavaConversions._
 
 class DescribeCommand(parent: JCommander) extends Command with Logging {
 
-  val params = new FeatureParams
+  val params = new DescribeParameters
   parent.addCommand(Command, params)
 
   def execute() = {
@@ -67,5 +67,8 @@ class DescribeCommand(parent: JCommander) extends Command with Logging {
 
 object DescribeCommand {
   val Command = "describe"
+
+  @Parameters(commandDescription = "Describe the attributes of a given feature in GeoMesa")
+  class DescribeParameters extends FeatureParams {}
 }
 

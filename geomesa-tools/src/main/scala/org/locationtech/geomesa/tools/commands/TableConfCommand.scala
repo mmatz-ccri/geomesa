@@ -117,21 +117,23 @@ object TableConfCommand {
   val DescribeSubCommand = "describe"
   val UpdateDommand = "update"
 
-  @Parameters
+  @Parameters(commandDescription = "Perform table configuration operations")
   class TableConfParams {}
 
-  @Parameters
+  @Parameters(commandDescription = "List the configuration parameters for a geomesa table")
   class ListParams extends FeatureParams {
     @Parameter(names = Array("--suffix", "-s"), description = "Table suffix to operate on (attr_idx, st_idx, or records)", required = true)
     var suffix: String = null
 
   }
 
+  @Parameters(commandDescription = "Describe a given configuration parameter for a table")
   class DescribeParams extends ListParams {
     @Parameter(names = Array("--param"), description = "Accumulo table configuration param name (e.g. table.bloom.enabled)", required = true)
     var param: String = null
   }
 
+  @Parameters(commandDescription = "Update a given table configuration parameter")
   class UpdateParams extends DescribeParams {
     @Parameter(names = Array("--new-value", "-n"), description = "New value of the property)", required = true)
     var newValue: String = null

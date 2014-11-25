@@ -15,7 +15,7 @@
  */
 package org.locationtech.geomesa.tools.commands
 
-import com.beust.jcommander.JCommander
+import com.beust.jcommander.{JCommander, Parameters}
 import com.typesafe.scalalogging.slf4j.Logging
 import org.locationtech.geomesa.tools.DataStoreHelper
 import org.locationtech.geomesa.tools.commands.ListCommand._
@@ -23,7 +23,7 @@ import org.locationtech.geomesa.tools.commands.ListCommand._
 // TODO consider the former -quiet option...?
 class ListCommand(parent: JCommander) extends Command with Logging {
 
-  val params = new GeoMesaParams
+  val params = new ListParameters()
   parent.addCommand(Command, params)
   lazy val ds = new DataStoreHelper(params).ds
 
@@ -41,4 +41,7 @@ class ListCommand(parent: JCommander) extends Command with Logging {
 
 object ListCommand {
   val Command = "list"
+
+  @Parameters(commandDescription = "List GeoMesa features for a given catalog")
+  class ListParameters extends GeoMesaParams {}
 }

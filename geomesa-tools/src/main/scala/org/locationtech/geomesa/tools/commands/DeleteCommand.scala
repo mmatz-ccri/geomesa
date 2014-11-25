@@ -15,7 +15,7 @@
  */
 package org.locationtech.geomesa.tools.commands
 
-import com.beust.jcommander.{JCommander, Parameter}
+import com.beust.jcommander.{JCommander, Parameter, Parameters}
 import com.typesafe.scalalogging.slf4j.Logging
 import org.locationtech.geomesa.tools.DataStoreHelper
 import org.locationtech.geomesa.tools.commands.DeleteCommand._
@@ -64,6 +64,7 @@ class DeleteCommand(parent: JCommander) extends Command with Logging {
 object DeleteCommand {
   val Command = "delete"
 
+  @Parameters(commandDescription = "Delete a feature's data and definition from a GeoMesa catalog")
   class DeleteParams extends FeatureParams {
     @Parameter(names = Array("--force"), description = "Force deletion of feature without prompt", required = false)
     var forceDelete: Boolean = false

@@ -17,7 +17,7 @@ package org.locationtech.geomesa.tools.commands
 
 import java.io.File
 
-import com.beust.jcommander.{JCommander, Parameter}
+import com.beust.jcommander.{Parameters, JCommander, Parameter}
 import com.typesafe.scalalogging.slf4j.Logging
 import org.locationtech.geomesa.tools.Utils.Formats._
 import org.locationtech.geomesa.tools._
@@ -42,7 +42,8 @@ class IngestCommand(parent: JCommander) extends Command with Logging {
 object IngestCommand {
   val Command = "ingest"
 
-  class IngestParameters extends CreateParams {
+  @Parameters(commandDescription = "Ingest a file of various formats into GeoMesa")
+  class IngestParameters extends CreateFeatureParams {
     @Parameter(names = Array("--indexSchema"), description = "GeoMesa index schema format string")
     var indexSchema: String = null
 

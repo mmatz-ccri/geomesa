@@ -15,17 +15,17 @@
  */
 package org.locationtech.geomesa.tools.commands
 
-import com.beust.jcommander.JCommander
+import com.beust.jcommander.{JCommander, Parameters}
 import com.typesafe.scalalogging.slf4j.Logging
 import org.geotools.data.{Query, Transaction}
 import org.geotools.filter.text.ecql.ECQL
 import org.locationtech.geomesa.core.data.AccumuloFeatureReader
 import org.locationtech.geomesa.tools.DataStoreHelper
-import org.locationtech.geomesa.tools.commands.ExplainCommand.Command
+import org.locationtech.geomesa.tools.commands.ExplainCommand.{Command, ExplainParameters}
 
 class ExplainCommand(parent: JCommander) extends Command with Logging {
 
-  val params = new CqlParams()
+  val params = new ExplainParameters()
   parent.addCommand(Command, params)
 
   override def execute() =
@@ -44,4 +44,7 @@ class ExplainCommand(parent: JCommander) extends Command with Logging {
 
 object ExplainCommand {
   val Command = "explain"
+
+  @Parameters(commandDescription = "Explain how a GeoMesa query will be executed")
+  class ExplainParameters extends CqlFilterParameters {}
 }

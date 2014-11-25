@@ -17,7 +17,7 @@ package org.locationtech.geomesa.tools.commands
 
 import java.io.File
 
-import com.beust.jcommander.{JCommander, Parameter}
+import com.beust.jcommander.{Parameters, JCommander, Parameter}
 import com.typesafe.scalalogging.slf4j.Logging
 import org.geotools.data.Query
 import org.geotools.data.simple.SimpleFeatureCollection
@@ -26,14 +26,14 @@ import org.joda.time.DateTime
 import org.locationtech.geomesa.core.data.AccumuloFeatureStore
 import org.locationtech.geomesa.tools.Utils.Formats._
 import org.locationtech.geomesa.tools._
-import org.locationtech.geomesa.tools.commands.ExportCommand.{Command, ExportParams}
+import org.locationtech.geomesa.tools.commands.ExportCommand.{Command, ExportParameters}
 import org.opengis.filter.Filter
 
 import scala.util.Try
 
 class ExportCommand(parent: JCommander) extends Command with Logging {
 
-  val params = new ExportParams
+  val params = new ExportParameters
   parent.addCommand(Command, params)
 
   override def execute() = {
@@ -97,7 +97,8 @@ class ExportCommand(parent: JCommander) extends Command with Logging {
 object ExportCommand {
   val Command = "export"
 
-  class ExportParams extends CqlParams {
+  @Parameters(commandDescription = "Export a GeoMesa feature")
+  class ExportParameters extends CqlFilterParameters {
     @Parameter(names = Array("--format"), description = "Format to export (csv|tsv|gml|json|shp)", required = true)
     var format: String = null
 

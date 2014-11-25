@@ -50,12 +50,12 @@ class FeatureParams extends GeoMesaParams{
   var featureName: String = null
 }
 
-class CqlParams extends FeatureParams{
+class CqlFilterParameters extends FeatureParams{
   @Parameter(names = Array("-q", "--query", "--filter"), description = "CQL Filter to use for the query explain", required = true)
   var cqlFilter: String = null
 }
 
-class CreateParams extends FeatureParams {
+class CreateFeatureParams extends FeatureParams {
   @Parameter(names = Array("--spec", "-s"), description = "SimpleFeatureType specification", required = true)
   var spec: String = null
 
