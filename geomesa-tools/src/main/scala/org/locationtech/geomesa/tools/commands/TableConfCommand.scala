@@ -44,7 +44,7 @@ class TableConfCommand(parent: JCommander) extends Command with Logging {
         implicit val tableOps = ds.connector.tableOperations()
         implicit val tableName = getTableName(tcListParams)
 
-        println(s"Gathering the configuration parameters for $tableName. Just a few moments...")
+        logger.info(s"Gathering the configuration parameters for table $tableName")
         getProperties().foreach(println)
 
       case DescribeSubCommand =>
@@ -52,7 +52,7 @@ class TableConfCommand(parent: JCommander) extends Command with Logging {
         implicit val tableOps = ds.connector.tableOperations()
         implicit val tableName = getTableName(tcDescParams)
 
-        println(s"Finding the value for '${tcDescParams.param}' on table '$tableName'. Just a few moments...")
+        logger.info(s"Finding the value for '${tcDescParams.param}' on table $tableName")
         val prop = getProp(tcDescParams.param)
         if (prop.nonEmpty) {
           println(prop)
@@ -68,11 +68,12 @@ class TableConfCommand(parent: JCommander) extends Command with Logging {
         val newValue = tcUpdateParams.newValue
 
         val property = getProp(param).get
-        println(s"'$param' on table '$tableName' currently set to: \n$property")
+        logger.info(s"'$param' on table '$tableName' currently set to: \n$property")
 
         if (newValue != property.getValue) {
-          println(s"Attempting to update '$param' to '$newValue'...")
+          logger.info(s"Attempting to update '$param' to '$newValue'...")
           setValue(param, newValue)
+          println(s"Set $param=$newValue")
         } else {
           logger.info(s"'$param' already set to '$newValue'. No need to update.")
         }

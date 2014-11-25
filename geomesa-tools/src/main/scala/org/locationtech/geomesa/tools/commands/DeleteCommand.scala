@@ -33,20 +33,20 @@ class DeleteCommand(parent: JCommander) extends Command with Logging {
       if (params.forceDelete) {
         true
       } else {
-        print(s"Delete '$feature' from catalog table '$catalog'? (yes/no): ")
+        logger.info(s"Delete '$feature' from catalog table '$catalog'? (yes/no): ")
         System.console().readLine().toLowerCase().trim == "yes"
       }
 
     if (confirmed) {
-      println(s"Deleting '$catalog:$feature'. This will take longer " +
+      logger.info(s"Deleting '$catalog:$feature'. This will take longer " +
         "than other commands to complete. Just a few moments...")
       try {
         val ds = new DataStoreHelper(params).ds
         ds.removeSchema(feature)
         if (!ds.getNames.contains(feature)) {
-          println(s"Feature '$catalog:$feature' successfully deleted.")
+          println(s"Deleted $catalog:$feature")
         } else {
-         println(s"There was an error deleting feature '$catalog:$feature'" +
+          logger.info(s"There was an error deleting feature '$catalog:$feature'" +
             "Please check that all arguments are correct in the previous command.")
         }
       } catch {
@@ -54,7 +54,7 @@ class DeleteCommand(parent: JCommander) extends Command with Logging {
           logger.error("Error deleting feature '$catalog:$feature': "+e.getMessage, e)
       }
     } else {
-      println("Deleted feature '$catalog:$feature' cancelled")
+      logger.info("Deleted feature '$catalog:$feature' cancelled")
     }
 
   }

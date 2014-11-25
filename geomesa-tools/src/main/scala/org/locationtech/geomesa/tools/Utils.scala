@@ -26,12 +26,6 @@ import org.apache.hadoop.fs.Path
 import scala.util.{Failure, Success, Try}
 import scala.xml.XML
 
-/**
- *  FeatureArguments, ExportArguments, and IngestArguments are case classes used by scopt for command
- *  line parsing. Arguments are stored in their respective case class and then used in individual
- *  classes where commands get executed.
- */
-
 object Utils {
 
   object IngestParams {

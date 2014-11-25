@@ -41,7 +41,6 @@
         <geoserver.version>2.5.2</geoserver.version>
         <gt.version>11.2</gt.version>
         <jts.version>1.13</jts.version>
-        <scopt.version>3.2.0</scopt.version>
         <jackson.codehaus.version>1.9.3</jackson.codehaus.version>
 
         <!-- environment-dependent versions -->
@@ -524,11 +523,6 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-math3</artifactId>
                 <version>3.3</version>
-            </dependency>
-            <dependency>
-                <groupId>com.github.scopt</groupId>
-                <artifactId>scopt_2.10</artifactId>
-                <version>${scopt.version}</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>
