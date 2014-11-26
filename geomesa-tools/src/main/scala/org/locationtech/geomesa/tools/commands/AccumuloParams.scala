@@ -30,10 +30,10 @@ class AccumuloParams {
   @Parameter(names = Array("--zookeepers", "-z"), description = "Zookeepers (host:port, comma separated)")
   var zookeepers: String = null
 
-  @Parameter(names = Array("--auths"), description = "Accumulo authorizations")
+  @Parameter(names = Array("--auths", "-a"), description = "Accumulo authorizations")
   var auths: String = null
 
-  @Parameter(names = Array("--visibilities"), description = "Accumulo scan visibilities")
+  @Parameter(names = Array("--visibilities", "-v"), description = "Accumulo scan visibilities")
   var visibilities: String = null
 
   @Parameter(names = Array("--mock"), description = "Run everything with a mock accumulo instance instead of a real one")
@@ -50,8 +50,13 @@ class FeatureParams extends GeoMesaParams{
   var featureName: String = null
 }
 
-class CqlFilterParameters extends FeatureParams{
-  @Parameter(names = Array("-q", "--query", "--filter"), description = "CQL Filter to use for the query explain", required = true)
+class RequiredCqlFilterParameters extends FeatureParams{
+  @Parameter(names = Array("--cql"), description = "CQL predicate", required = true)
+  var cqlFilter: String = null
+}
+
+class OptionalCqlFilterParameters extends FeatureParams{
+  @Parameter(names = Array("--cql"), description = "CQL predicate")
   var cqlFilter: String = null
 }
 
@@ -59,7 +64,7 @@ class CreateFeatureParams extends FeatureParams {
   @Parameter(names = Array("--spec", "-s"), description = "SimpleFeatureType specification", required = true)
   var spec: String = null
 
-  @Parameter(names = Array("--dtField", "-d"), description = "DateTime field name to use as the default dtg", required = false)
+  @Parameter(names = Array("--dtField"), description = "DateTime field name to use as the default dtg")
   var dtgField: String = null
 
   @Parameter(names = Array("--useSharedTables"), description = "Use shared tables in Accumulo for feature storage (default false)")

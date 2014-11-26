@@ -37,39 +37,40 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.util.Try
 
-trait FeatureExporter {
-  def write(features: SimpleFeatureCollection, f: File): Unit = {
-    val fos = new FileOutputStream(f)
-    try {
-      write(features, fos)
-    } finally {
-      fos.close()
-    }
-  }
-
-  def write(features: SimpleFeatureCollection, os: OutputStream): Unit
+trait FeatureExporter extends AutoCloseable with Flushable {
+  def write(featureCollection: SimpleFeatureCollection): Unit
 }
 
-class GeoJsonExport extends FeatureExporter {
+class GeoJsonExport(writer: Writer) extends FeatureExporter {
 
   val featureJson = new FeatureJSON()
 
-  override def write(features: SimpleFeatureCollection, os: OutputStream) {
-    featureJson.writeFeatureCollection(features, os)
+  override def write(features: SimpleFeatureCollection) = featureJson.writeFeatureCollection(features, writer)
+
+  override def flush() = writer.flush()
+  override def close() = {
+    flush()
+    writer.close()
   }
 }
 
-class GmlExport extends FeatureExporter {
+class GmlExport(os: OutputStream) extends FeatureExporter {
 
   val encode = new GML(Version.WFS1_0)
   encode.setNamespace("location", "location.xsd")
 
-  override def write(features: SimpleFeatureCollection, os: OutputStream) = encode.encode(os, features)
+  override def write(features: SimpleFeatureCollection) = encode.encode(os, features)
+
+  override def flush() = os.flush()
+  override def close() = {
+    os.flush()
+    os.close()
+  }
 }
 
-class ShapefileExport extends FeatureExporter {
+class ShapefileExport(file: File) extends FeatureExporter {
 
-  override def write(features: SimpleFeatureCollection, file: File) = {
+  override def write(features: SimpleFeatureCollection) = {
     // create a new shapfile data store
     val url = DataUtilities.fileToURL(file)
     val factory = new ShapefileDataStoreFactory()
@@ -81,12 +82,13 @@ class ShapefileExport extends FeatureExporter {
     store.addFeatures(features)
   }
 
-  override def write(features: SimpleFeatureCollection, os: OutputStream) =
-    throw new UnsupportedOperationException("Cannot export shape file to output stream...use file-based export only")
+  override def flush() = {}
+  override def close() = {}
 
 }
 
-class DelimitedExport(format: String,
+class DelimitedExport(writer: Writer,
+                      format: String,
                       attributes: Option[String],
                       idAttribute: Option[String],
                       latAttribute: Option[String],
@@ -101,7 +103,7 @@ class DelimitedExport(format: String,
   lazy val dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
   lazy val geometryFactory = JTSFactoryFinder.getGeometryFactory
 
-  override def write(features: SimpleFeatureCollection, output: OutputStream) = {
+  override def write(features: SimpleFeatureCollection) = {
 
     val attrArr   = attributes.map(_.split("""(?<!\\),""")).getOrElse(Array.empty[String])
     val idAttrArr = List(idAttribute).flatten
@@ -116,10 +118,9 @@ class DelimitedExport(format: String,
         features.getSchema.getAttributeDescriptors.map(_.getLocalName)
       }
 
-    val writer = new PrintWriter(new BufferedWriter(new OutputStreamWriter(output)))
-
     // write out a header line
-    writer.println(attrNames.mkString(delimiter))
+    writer.write(attrNames.mkString(delimiter))
+    writer.write("\n")
 
     var count = 0
     features.features.foreach { sf =>
@@ -153,7 +154,7 @@ class DelimitedExport(format: String,
           }
       }
 
-  def writeFeature(sf: SimpleFeature, writer: PrintWriter, attrNames: Seq[String], idField: Option[String]) = {
+  def writeFeature(sf: SimpleFeature, writer: Writer, attrNames: Seq[String], idField: Option[String]) = {
     val attrMap = mutable.Map.empty[String, Object]
 
     // copy attributes into map where we can manipulate them
@@ -178,7 +179,14 @@ class DelimitedExport(format: String,
       }
     }
 
-    writer.println(attributeValues.mkString(delimiter))
+    writer.write(attributeValues.mkString(delimiter))
+    writer.write("\n")
+  }
+
+  override def flush() = writer.flush()
+  override def close() = {
+    writer.flush()
+    writer.close()
   }
 
 }

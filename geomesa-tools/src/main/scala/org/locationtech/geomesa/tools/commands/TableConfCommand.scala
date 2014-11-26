@@ -77,6 +77,10 @@ class TableConfCommand(parent: JCommander) extends Command with Logging {
         } else {
           logger.info(s"'$param' already set to '$newValue'. No need to update.")
         }
+
+      case _ =>
+        println("Error: no tableconf command listed...run as: geomesa tableconf <tableconf-command>")
+        parent.usage(Command)
     }
   }
 

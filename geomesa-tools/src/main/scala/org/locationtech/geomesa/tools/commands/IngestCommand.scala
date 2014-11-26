@@ -16,6 +16,7 @@
 package org.locationtech.geomesa.tools.commands
 
 import java.io.File
+import java.util
 
 import com.beust.jcommander.{Parameters, JCommander, Parameter}
 import com.typesafe.scalalogging.slf4j.Logging
@@ -23,19 +24,23 @@ import org.locationtech.geomesa.tools.Utils.Formats._
 import org.locationtech.geomesa.tools._
 import org.locationtech.geomesa.tools.commands.IngestCommand._
 
+import scala.collection.JavaConversions._
+
 class IngestCommand(parent: JCommander) extends Command with Logging {
 
   val params = new IngestParameters()
   parent.addCommand(Command, params)
 
-  override def execute(): Unit =
-    getFileExtension(params.file) match {
+  override def execute(): Unit = {
+    val fmt = Option(params.format).getOrElse(getFileExtension(params.files(0)))
+    fmt match {
       case CSV | TSV => new DelimitedIngest(params).run()
       case SHP       => new ShpIngest(params).run()
       case _         =>
-        logger.error("Error: File format not supported for file " + params.file.getPath + ". Supported formats" +
+        logger.error("Error: File format not supported for file " + params.files(0).getPath + ". Supported formats" +
           "are csv,tsv,shp")
     }
+  }
 
 }
 
@@ -56,7 +61,7 @@ object IngestCommand {
     @Parameter(names = Array("--idFields"), description = "the set of attributes to combine together to create a unique id for the feature")
     var idFields: String = null
 
-    @Parameter(names = Array("--hash" , "-h"), description = "flag to toggle using md5hash as the feature id")
+    @Parameter(names = Array("--hash"), description = "flag to toggle using md5hash as the feature id")
     var hash: Boolean = false
 
     @Parameter(names = Array("--lat"), description = "name of the latitude field in the SimpleFeatureType if ingesting point data")
@@ -65,7 +70,10 @@ object IngestCommand {
     @Parameter(names = Array("--lon"), description = "name of the longitude field in the SimpleFeatureType if ingesting point data")
     var lon: String = null
 
-    @Parameter(names = Array("--file"), description = "the file to be ingested", required = true)
-    var file: File = null
+    @Parameter(names = Array("--format"), description = "format of incoming data (csv | tsv | shp) to override file extension recognition")
+    var format: String = null
+
+    @Parameter(description = "<file>...", required = true)
+    var files: java.util.List[File] = new util.ArrayList[File]()
   }
 }

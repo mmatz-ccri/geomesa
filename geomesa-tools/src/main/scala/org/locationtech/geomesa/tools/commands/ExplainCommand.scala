@@ -46,5 +46,5 @@ object ExplainCommand {
   val Command = "explain"
 
   @Parameters(commandDescription = "Explain how a GeoMesa query will be executed")
-  class ExplainParameters extends CqlFilterParameters {}
+  class ExplainParameters extends RequiredCqlFilterParameters {}
 }

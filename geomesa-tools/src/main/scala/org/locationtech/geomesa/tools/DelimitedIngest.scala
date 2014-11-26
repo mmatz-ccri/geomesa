@@ -28,6 +28,7 @@ import org.locationtech.geomesa.tools.Utils.Modes._
 import org.locationtech.geomesa.tools.Utils.{IngestParams, Modes}
 import org.locationtech.geomesa.tools.commands.IngestCommand.IngestParameters
 
+import scala.collection.JavaConversions._
 import scala.io.Source
 import scala.util.Try
 
@@ -41,7 +42,7 @@ class DelimitedIngest(params: IngestParameters) extends AccumuloProperties{
     JobUtils.setLibJars(conf, libJars = ingestLibJars, searchPath = ingestJarSearchPath)
 
     // setup ingest
-    val hdfsMode = if (getMode(params.file) == Modes.Hdfs) Hdfs(strict = true, conf) else Local(strictSources = true)
+    val hdfsMode = if (getMode(params.files(0)) == Modes.Hdfs) Hdfs(strict = true, conf) else Local(strictSources = true)
     val arguments = Mode.putMode(hdfsMode, getScaldingArgs())
     val job = new SVIngest(arguments)
     val flow = job.buildFlow
@@ -68,10 +69,10 @@ class DelimitedIngest(params: IngestParameters) extends AccumuloProperties{
       () => JobUtils.getJarsFromClasspath(classOf[Connector]))
 
   def getScaldingArgs(): Args = {
-    val singleArgs = List(classOf[SVIngest].getCanonicalName, getModeFlag(params.file))
+    val singleArgs = List(classOf[SVIngest].getCanonicalName, getModeFlag(params.files(0)))
 
     val requiredKvArgs: List[(String, String)] = List(
-      IngestParams.FILE_PATH         -> params.file.getPath,
+      IngestParams.FILE_PATH         -> params.files(0).getPath,
       IngestParams.SFT_SPEC          -> URLEncoder.encode(params.spec, "UTF-8"),
       IngestParams.CATALOG_TABLE     -> params.catalog,
       IngestParams.ZOOKEEPERS        -> Option(params.zookeepers).getOrElse(zookeepersProp),
@@ -79,7 +80,7 @@ class DelimitedIngest(params: IngestParameters) extends AccumuloProperties{
       IngestParams.ACCUMULO_USER     -> params.user,
       IngestParams.ACCUMULO_PASSWORD -> params.password,
       IngestParams.DO_HASH           -> params.hash.toString,
-      IngestParams.FORMAT            -> getFileExtension(params.file),
+      IngestParams.FORMAT            -> getFileExtension(params.files(0)),
       IngestParams.FEATURE_NAME      -> params.featureName,
       IngestParams.IS_TEST_INGEST    -> false.toString
     )

@@ -20,7 +20,6 @@ import com.typesafe.scalalogging.slf4j.Logging
 import org.locationtech.geomesa.tools.DataStoreHelper
 import org.locationtech.geomesa.tools.commands.ListCommand._
 
-// TODO consider the former -quiet option...?
 class ListCommand(parent: JCommander) extends Command with Logging {
 
   val params = new ListParameters()
@@ -29,12 +28,7 @@ class ListCommand(parent: JCommander) extends Command with Logging {
 
   override def execute() = {
     logger.info("Running List Features on catalog "+params.catalog)
-    val types = ds.getTypeNames
-    val numTypes = types.size
-
-    println("Catalog: " + params.catalog)
-    println("FeatureCount: " + numTypes)
-    types.foreach(println)
+    ds.getTypeNames.foreach(println)
   }
 
 }

@@ -15,7 +15,7 @@
  */
 package org.locationtech.geomesa.tools.commands
 
-import java.io.File
+import java.io._
 
 import com.beust.jcommander.{Parameters, JCommander, Parameter}
 import com.typesafe.scalalogging.slf4j.Logging
@@ -39,24 +39,29 @@ class ExportCommand(parent: JCommander) extends Command with Logging {
   override def execute() = {
 
     val fmt = params.format.toLowerCase()
+    val features = getFeatureCollection()
     val exporter: FeatureExporter = fmt match {
       case CSV | TSV       =>
-        new DelimitedExport(fmt,
+        new DelimitedExport(
+          getWriter(),
+          fmt,
           Option(params.attributes),
           Option(params.idAttribute),
           Option(params.latAttribute),
           Option(params.lonAttribute),
           Option(params.dateAttribute))
-      case SHP             => new ShapefileExport()
-      case GeoJson | JSON  => new GeoJsonExport()
-      case GML             => new GmlExport()
+      case SHP             => new ShapefileExport(getFile())
+      case GeoJson | JSON  => new GeoJsonExport(getWriter())
+      case GML             => new GmlExport(getOutputStream())
       case _ =>
         throw new IllegalArgumentException("Unsupported export format. Supported formats are shp, geojson, csv, and gml.")
     }
-
-    val outFile = createUniqueFileName()
-    val features = getFeatureCollection()
-    exporter.write(features, outFile)
+    try {
+      exporter.write(features)
+    } finally {
+      exporter.flush()
+      exporter.close()
+    }
   }
 
   def getFeatureCollection(overrideAttributes: Option[String] = None): SimpleFeatureCollection = {
@@ -82,46 +87,53 @@ class ExportCommand(parent: JCommander) extends Command with Logging {
     }
   }
 
-  // TODO examine this method
-  def createUniqueFileName(): File = {
-    var outputPath: File = null
-    do {
-      if (outputPath != null) { Thread.sleep(1) }
-      outputPath = new File(s"${System.getProperty("user.dir")}/${params.catalog}_${params.featureName}_${DateTime.now()}.${params.format}")
-    } while (outputPath.exists)
-    outputPath
+  def getOutputStream(): OutputStream =
+    Option(params.file) match {
+      case Some(file) => new FileOutputStream(file)
+      case None       => System.out
+    }
+  
+  def getWriter(): Writer = new BufferedWriter(new OutputStreamWriter(getOutputStream()))
+  
+  def getFile(): File = Option(params.file) match {
+    case Some(file) => file
+    case None       => 
+      println("Error: --file option required")
+      throw new Exception("Error: --file option required")
   }
-
 }
 
 object ExportCommand {
   val Command = "export"
 
   @Parameters(commandDescription = "Export a GeoMesa feature")
-  class ExportParameters extends CqlFilterParameters {
+  class ExportParameters extends OptionalCqlFilterParameters {
     @Parameter(names = Array("--format"), description = "Format to export (csv|tsv|gml|json|shp)", required = true)
     var format: String = null
 
     @Parameter(names = Array("--maxFeatures", "-m"), description = "Maximum number of features to return. default: Long.MaxValue")
     var maxFeatures: Integer = Int.MaxValue
 
-    @Parameter(names = Array("--attributes", "-a"), description = "Attributes from feature to export " +
+    @Parameter(names = Array("--attributes", "-attrs"), description = "Attributes from feature to export " +
       "(comma-separated)...Comma-separated expressions with each in the format " +
       "attribute[=filter_function_expression]|derived-attribute=filter_function_expression. " +
       "filter_function_expression is an expression of filter function applied to attributes, literals " +
       "and filter functions, i.e. can be nested")
     var attributes: String = null
 
-    @Parameter(names = Array("--idAttribute"), description = "name of the id attribute to export")
+    @Parameter(names = Array("--idAttribute", "-id"), description = "name of the id attribute to export")
     var idAttribute: String = null
 
-    @Parameter(names = Array("--latAttribute"), description = "name of the latitude attribute to export")
+    @Parameter(names = Array("--latAttribute", "-lat"), description = "name of the latitude attribute to export")
     var latAttribute: String = null
 
-    @Parameter(names = Array("--lonAttribute"), description = "name of the longitude attribute to export")
+    @Parameter(names = Array("--lonAttribute", "-lon"), description = "name of the longitude attribute to export")
     var lonAttribute: String = null
 
-    @Parameter(names = Array("--dateAttribute"), description = "name of the date attribute to export")
+    @Parameter(names = Array("--dateAttribute", "-dtg"), description = "name of the date attribute to export")
     var dateAttribute: String = null
+
+    @Parameter(names = Array("--file"), description = "name of the file to output to instead of std out")
+    var file: File = null
   }
 }

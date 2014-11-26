@@ -63,7 +63,7 @@ class ShpIngestTest extends Specification {
     val ds = new DataStoreHelper(ingestParams).ds
 
     "should properly ingest a shapefile" >> {
-      ingestParams.file = shpFile
+      ingestParams.files.add(shpFile)
       new ShpIngest(ingestParams).run()
 
       val fs = ds.getFeatureSource("shpingest")

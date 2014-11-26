@@ -35,7 +35,7 @@ class ShpIngest(params: IngestParameters) extends Logging {
    * @return true or false indicating the success of the ingest
    */
   def run() = {
-    val fileUrl = params.file.toURI.toURL
+    val fileUrl = params.files(0).toURI.toURL
     val shpParams = Map(ShapefileDataStoreFactory.URLP.getName -> fileUrl)
     val shpDataStore = DataStoreFinder.getDataStore(shpParams)
     val featureTypeName = shpDataStore.getTypeNames.head
