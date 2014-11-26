@@ -18,22 +18,22 @@ package org.locationtech.geomesa.tools.commands
 import com.beust.jcommander.Parameter
 
 class AccumuloParams {
-  @Parameter(names = Array("--user", "-u"), description = "Accumulo user name", required = true)
+  @Parameter(names = Array("-u", "--user"), description = "Accumulo user name", required = true)
   var user: String = null
 
-  @Parameter(names = Array("--password", "-p"), description = "Accumulo password", required = true)
+  @Parameter(names = Array("-p", "--password"), description = "Accumulo password", required = true)
   var password: String = null
 
-  @Parameter(names = Array("--instance", "-i"), description = "Accumulo instance name")
+  @Parameter(names = Array("-i", "--instance"), description = "Accumulo instance name")
   var instance: String = null
 
-  @Parameter(names = Array("--zookeepers", "-z"), description = "Zookeepers (host:port, comma separated)")
+  @Parameter(names = Array("-z", "--zookeepers"), description = "Zookeepers (host:port, comma separated)")
   var zookeepers: String = null
 
-  @Parameter(names = Array("--auths", "-a"), description = "Accumulo authorizations")
+  @Parameter(names = Array("-a", "--auths"), description = "Accumulo authorizations")
   var auths: String = null
 
-  @Parameter(names = Array("--visibilities", "-v"), description = "Accumulo scan visibilities")
+  @Parameter(names = Array("-v", "--visibilities"), description = "Accumulo scan visibilities")
   var visibilities: String = null
 
   @Parameter(names = Array("--mock"), description = "Run everything with a mock accumulo instance instead of a real one")
@@ -41,12 +41,12 @@ class AccumuloParams {
 }
 
 class GeoMesaParams extends AccumuloParams {
-  @Parameter(names = Array("--catalog", "-c"), description = "Catalog table name for GeoMesa", required = true)
+  @Parameter(names = Array("-c", "--catalog"), description = "Catalog table name for GeoMesa", required = true)
   var catalog: String = null
 }
 
 class FeatureParams extends GeoMesaParams{
-  @Parameter(names = Array("--feature-name", "-f"), description = "Simple Feature Type name on which to operate", required = true)
+  @Parameter(names = Array("-f", "--feature-name"), description = "Simple Feature Type name on which to operate", required = true)
   var featureName: String = null
 }
 
@@ -61,14 +61,14 @@ class OptionalCqlFilterParameters extends FeatureParams{
 }
 
 class CreateFeatureParams extends FeatureParams {
-  @Parameter(names = Array("--spec", "-s"), description = "SimpleFeatureType specification", required = true)
+  @Parameter(names = Array("-s", "--spec"), description = "SimpleFeatureType specification", required = true)
   var spec: String = null
 
   @Parameter(names = Array("--dtField"), description = "DateTime field name to use as the default dtg")
   var dtgField: String = null
 
-  @Parameter(names = Array("--useSharedTables"), description = "Use shared tables in Accumulo for feature storage (default false)")
-  var useSharedTables: Boolean = true
+  @Parameter(names = Array("--useSharedTables"), description = "Use shared tables in Accumulo for feature storage")
+  var useSharedTables: Boolean = false
 
   @Parameter(names = Array("--shards"), description = "Number of shards to use for the storage tables (defaults to number of tservers)")
   var numShards: Integer = null

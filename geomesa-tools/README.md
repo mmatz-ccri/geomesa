@@ -30,24 +30,22 @@ Now, you should be able to use GeoMesa from any directory on your computer. To t
 
 This should print out the following usage text: 
 
-    GeoMesa Tools 1.0
-    Required for each command:
-            -u, --username: the Accumulo username : required
-    Optional parameters:
-            -p, --password: the Accumulo password. This can also be provided after entering a command.
-            help, -help, --help: show this help dialog or the help dialog for a specific command (e.g. geomesa create help)
-    Supported commands are:
-             create: Create a feature in GeoMesa
-             delete: Delete a feature from the specified Catalog Table in GeoMesa
-             describe: Describe the attributes of a specified feature
-             explain: Explain and plan a query in GeoMesa
-             export: Export all or a set of features in csv, geojson, gml, or shp format
-             ingest: Ingest a feature into GeoMesa
-             list: List the features in the specified Catalog Table
-             tableconf: List, describe, and update table configuration parameters
+    Usage: geomesa [command] [command options]
+      Commands:
+        tableconf    Perform table configuration operations
+        list         List GeoMesa features for a given catalog
+        export       Export a GeoMesa feature
+        delete       Delete a feature's data and definition from a GeoMesa catalog
+        describe     Describe the attributes of a given feature in GeoMesa
+        ingest       Ingest a file of various formats into GeoMesa
+        create       Create a feature definition in a GeoMesa catalog
+        explain      Explain how a GeoMesa query will be executed
+        help         Show help
                 
-This usage text gives a brief overview of how to use each command, and this is expanded upon below with example commands.
-The command line tools also provides help for each command by passing `--help` to any individual command.  
+This usage text lists the available commands. To see help for an individual command run `geomesa help <command-name>` which for example
+will give you something like this:
+
+
 
 The Accumulo username and password is required for each command. Specify the username and password
 in each command by using `-u` or `--username `and `-p` or `--password`, respectively. One can also only specify the username
@@ -67,64 +65,111 @@ be added as arguments to each command, if needed.
 
 ### create
 To create a new feature on a specified catalog table, use the `create` command.  
-#### Required flags: 
-Specify the catalog table to use with `-c` or `--catalog`. This can be a previously created catalog table, or a new catalog table.  
-Specify the feature to create with the `-f` or `--feature-name`.  
-Specify the SimpleFeatureType schema with `-s` or `--spec`.  
-Specify the default temporal attribute with `-d` or `--dt-field`.
+#### Options (required options denoted with star)
+      -a, --auths           Accumulo authorizations
+    * -c, --catalog         Catalog table name for GeoMesa
+      --dtField             DateTime field name to use as the default dtg
+    * -f, --feature-name    Simple Feature Type name on which to operate
+      -i, --instance        Accumulo instance name
+      --mock                Run everything with a mock accumulo instance instead of a real one, Default: false
+    * -p, --password        Accumulo password
+      --shards              Number of shards to use for the storage tables (defaults to number of tservers)
+    * -s, --spec            SimpleFeatureType specification
+      --useSharedTables     Use shared tables in Accumulo for feature storage Default: true
+    * -u, --user            Accumulo user name
+      -v, --visibilities    Accumulo scan visibilities
+      -z, --zookeepers      Zookeepers (host:port, comma separated)
+
+
 #### Example command:
     geomesa create -u username -p password -c test_create -f testing -s fid:String:index=true,dtg:Date,geom:Point:srid=4326 -d dtg
 
 ### delete
-To delete a feature on a specified catalog table, use the `delete` command.  
-#### Required flags: 
-Specify the catalog table to use with `-o` or `--catalog`. NOTE: Catalog tables will not be deleted when using the `delete` command, only the tables related to the given feature.  
-Specify the feature to delete with `-f` or `--feature-name`.  
-#### Optional flags: 
-To force the deletion of a table, without a user confirmation prompt, use `--force`.
-#### Example command:
+To delete a feature on a specified catalog table, use the `delete` command.
+
+####Options (required options denoted with star):
+      -a, --auths           Accumulo authorizations
+    * -c, --catalog         Catalog table name for GeoMesa
+    * -f, --feature-name    Simple Feature Type name on which to operate
+      --force               Force deletion of feature without prompt, Default: false
+      -i, --instance        Accumulo instance name
+      --mock                Run everything with a mock accumulo instance instead of a real one, Default: false
+    * -p, --password        Accumulo password
+    * -u, --user            Accumulo user name
+      -v, --visibilities    Accumulo scan visibilities
+      -z, --zookeepers      Zookeepers (host:port, comma separated)
+    
+####Example:
     geomesa delete -u username -p password  -c test_delete -f testing
 
 ### describe
 To describe the attributes of a feature on a specified catalog table, use the `describe` command.  
-#### Required flags: 
-Specify the catalog table to use with `-o` or `--catalog`.
-Specify the feature to describe with `-f` or `--feature-name`.  
-#### Optional flags: 
-To pipe the output of the command, use `-q` or `--quiet`.
+
+####Options (required options denoted with star)
+      -a, --auths           Accumulo authorizations
+    * -c, --catalog         Catalog table name for GeoMesa
+    * -f, --feature-name    Simple Feature Type name on which to operate
+      -i, --instance        Accumulo instance name      --mock     Run everything with a mock accumulo instance instead of a real one     Default: false
+    * -p, --password        Accumulo password
+    * -u, --user            Accumulo user name
+      -v, --visibilities    Accumulo scan visibilities
+      -z, --zookeepers      Zookeepers (host:port, comma separated)
+      
 #### Example command:
     geomesa describe -u username -p password -c test_delete -f testing
  
 ### explain
 To ask GeoMesa how it intends to satisfy a given query, use the `explain` command.
-#### Required flags: 
-Specify the catalog table to use with `-c` or `--catalog`. This can be a previously created catalog table, or a new catalog table.  
-Specify the feature to create with the `-f` or `-feature-name`.  
-Specify the filter string with `-q` or `--filter`.
+
+####Options (required options denoted with star)
+      -a, --auths            Accumulo authorizations
+    * -c, --catalog          Catalog table name for GeoMesa
+    *     --cql              CQL predicate
+    * -f, --feature-name     Simple Feature Type name on which to operate
+      -i, --instance         Accumulo instance name      --mock     Run everything with a mock accumulo instance instead of a real one     Default: false
+    * -p, --password         Accumulo password
+    * -u, --user             Accumulo user name
+      -v, --visibilities     Accumulo scan visibilities
+      -z, --zookeepers       Zookeepers (host:port, comma separated)
+
 #### Example command:
     geomesa explain -u username -p password -c test_catalog -f test_feature -q "INTERSECTS(geom, POLYGON ((41 28, 42 28, 42 29, 41 29, 41 28)))"
 
 ### export
 To export features, use the `export` command.  
-#### Required flags:
-Specify the catalog table to use with `-c` or `--catalog`.  
-Specify the feature to export with `-f` or `--feature-name`.  
-Specify the export format with `-o` or `--format`. The supported export formats are csv, gml, geojson, and shp.
-#### Optional flags:
-To set a maximum number of features to return, use `-m` or `--maxFeatures` followed by the maximum number of features.
-To run an ECQL query, use `-q` or `--query` followed by the query filter string.  
-To export to stdOut, use `-s` or `--stdout`. This is useful for piping output.  
-To retrieve a subset of attributes or transformed values from each feature, use `-a` or `--attributes` followed by a
-String of comma-separated expressions with each in the format
-`attribute[=filter_function_expression]|derived-attribute=filter_function_expression`. `filter_function_expression` is
-an expression of filter function applied to attributes, literals and filter functions, i.e. can be nested. Filter
-function list can be found at [here]([http://docs.geoserver.org/latest/en/user/filter/function_reference.html#filter-function-reference]).
-Any comma (,) in a `filter_function_expression` has to be escaped by `\,`.
+
+      --attrs               Attribute expression from feature to export (comma-separated)...see notes for syntax
+      -a, --auths           Accumulo authorizations
+    * -c, --catalog         Catalog table name for GeoMesa
+      --cql                 CQL predicate
+      -dtg                  name of the date attribute to export
+    * -f, --feature-name    Simple Feature Type name on which to operate
+      --file                name of the file to output to instead of std out
+    * --format              Format to export (csv|tsv|gml|json|shp)
+      -id                   name of the id attribute to export
+      -i, --instance        Accumulo instance name
+      -lat                  name of the latitude attribute to export
+      -lon                  name of the longitude attribute to export
+      -m, --maxFeatures     Maximum number of features to return. default: Long.MaxValue     Default: 2147483647
+      --mock                Run everything with a mock accumulo instance instead of a real one     Default: false
+    * -p, --password        Accumulo password
+    * -u, --user            Accumulo user name
+      -v, --visibilities    Accumulo scan visibilities
+      -z, --zookeepers      Zookeepers (host:port, comma separated)
+
+<b>attribute expressions</b>
+Attribute expressions are comma-separated expressions with each in the format 
+    
+    attribute[=filter_function_expression]|derived-attribute=filter_function_expression. 
+    
+`filter_function_expression` is an expression of filter function applied to attributes, literals and filter functions, i.e. can be nested
+
 #### Example commands:
     geomesa export -u username -p password -c test_catalog -f test_feature -a "geom,text,user_name" -o csv -q "include" -m 100
     geomesa export -u username -p password -c test_catalog -f test_feature -a "geom,text,user_name" -o gml -q "user_name='JohnSmith'"
     geomesa export -u username -p password -c test_catalog -f test_featurel -a "user_name,buf=buffer(geom\, 2)"
     -o csv -q "[[ user_name like `John%' ] AND [ bbox(geom, 22.1371589, 44.386463, 40.228581, 52.379581, 'EPSG:4326') ]]"
+    
 ### ingest
 Ingests CSV, TSV, and SHP files from the local file system and HDFS. CSV and TSV files can be ingested either with explicit latitude and longitude columns or with a column of WKT geometries.
 For lat/lon column ingest, the sft spec must include an additional geometry attribute in the sft beyond the number of columns in the file such as: `*geom:Point`.
