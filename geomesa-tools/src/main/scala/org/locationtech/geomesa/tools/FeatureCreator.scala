@@ -36,8 +36,9 @@ object FeatureCreator extends Logging {
       Option(params.dtgField),
       Option(params.useSharedTables),
       params.catalog,
-      Option(params.numShards))
+      toScalaOpt(params.numShards))
 
+  def toScalaOpt(jInt: Integer): Option[Int] = if (jInt == null) None else Some(jInt)
 
   def createFeature(ds: AccumuloDataStore,
                     sftspec: String,
