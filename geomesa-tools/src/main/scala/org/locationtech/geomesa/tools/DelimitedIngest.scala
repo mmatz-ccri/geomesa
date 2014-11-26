@@ -104,7 +104,7 @@ class DelimitedIngest(params: IngestParameters) extends AccumuloProperties{
         s"GeoMesa is defaulting to the system time for ingested features.")
     }
 
-    val kvArgs = (requiredKvArgs ++ optionalKvArgs).map { case (k,v) => s"--$k $v"}
+    val kvArgs = (requiredKvArgs ++ optionalKvArgs).map { case (k,v) => List(s"--$k", v)}.flatten
     Args(singleArgs ++ kvArgs)
   }
 }

@@ -33,7 +33,7 @@ class DeleteCommand(parent: JCommander) extends Command with Logging {
       if (params.forceDelete) {
         true
       } else {
-        logger.info(s"Delete '$feature' from catalog table '$catalog'? (yes/no): ")
+        println(s"Delete '$feature' from catalog table '$catalog'? (yes/no): ")
         System.console().readLine().toLowerCase().trim == "yes"
       }
 
