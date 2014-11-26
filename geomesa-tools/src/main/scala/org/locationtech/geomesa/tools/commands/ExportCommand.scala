@@ -39,7 +39,7 @@ class ExportCommand(parent: JCommander) extends Command with Logging {
   override def execute() = {
 
     val fmt = params.format.toLowerCase()
-    val features = getFeatureCollection()
+    val features = getFeatureCollection(fmt)
     val exporter: FeatureExporter = fmt match {
       case CSV | TSV       =>
         new DelimitedExport(
@@ -61,6 +61,22 @@ class ExportCommand(parent: JCommander) extends Command with Logging {
     } finally {
       exporter.flush()
       exporter.close()
+    }
+  }
+
+  def getFeatureCollection(fmt: String): SimpleFeatureCollection = {
+    fmt match {
+      case SHP =>
+        val schemaString =
+          if (Option(params.attributes).nonEmpty) {
+            params.attributes
+          } else {
+            val sft = new DataStoreHelper(params).ds.getSchema(params.featureName)
+            ShapefileExport.modifySchema(sft)
+          }
+        getFeatureCollection(Some(schemaString))
+
+      case _ => getFeatureCollection(Option(params.attributes))
     }
   }
 
@@ -97,8 +113,7 @@ class ExportCommand(parent: JCommander) extends Command with Logging {
   
   def getFile(): File = Option(params.file) match {
     case Some(file) => file
-    case None       => 
-      println("Error: --file option required")
+    case None       =>
       throw new Exception("Error: --file option required")
   }
 }

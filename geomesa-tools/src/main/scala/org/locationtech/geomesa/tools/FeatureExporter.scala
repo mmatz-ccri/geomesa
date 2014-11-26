@@ -31,7 +31,7 @@ import org.geotools.geojson.feature.FeatureJSON
 import org.geotools.geometry.jts.JTSFactoryFinder
 import org.locationtech.geomesa.tools.Utils.Formats
 import org.locationtech.geomesa.utils.geotools.Conversions._
-import org.opengis.feature.simple.SimpleFeature
+import org.opengis.feature.simple.{SimpleFeatureType, SimpleFeature}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -71,12 +71,10 @@ class GmlExport(os: OutputStream) extends FeatureExporter {
 class ShapefileExport(file: File) extends FeatureExporter {
 
   override def write(features: SimpleFeatureCollection) = {
-    // create a new shapfile data store
     val url = DataUtilities.fileToURL(file)
     val factory = new ShapefileDataStoreFactory()
     val newShapeFile = factory.createDataStore(url).asInstanceOf[ShapefileDataStore]
 
-    // create a schema in the new datastore
     newShapeFile.createSchema(features.getSchema)
     val store = newShapeFile.getFeatureSource.asInstanceOf[SimpleFeatureStore]
     store.addFeatures(features)
@@ -85,6 +83,22 @@ class ShapefileExport(file: File) extends FeatureExporter {
   override def flush() = {}
   override def close() = {}
 
+}
+
+object ShapefileExport {
+
+  def modifySchema(sft: SimpleFeatureType): String = {
+    // When exporting to Shapefile, we must rename the Geometry Attribute Descriptor to "the_geom", per
+    // the requirements of Geotools' ShapefileDataStore and ShapefileFeatureWriter. The easiest way to do this
+    // is transform the attribute when retrieving the SimpleFeatureCollection.
+    val attrDescriptors = sft.getAttributeDescriptors.map(_.getLocalName).mkString(",")
+    val geomDescriptor = sft.getGeometryDescriptor.getLocalName
+    if (attrDescriptors.contains(geomDescriptor)) {
+      attrDescriptors.replace(geomDescriptor, s"the_geom=$geomDescriptor")
+    } else {
+      attrDescriptors.concat(s",the_geom=$geomDescriptor")
+    }
+  }
 }
 
 class DelimitedExport(writer: Writer,
