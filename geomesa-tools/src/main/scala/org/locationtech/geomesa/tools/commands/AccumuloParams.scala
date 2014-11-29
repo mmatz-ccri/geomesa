@@ -27,7 +27,7 @@ class AccumuloParams {
   @Parameter(names = Array("-i", "--instance"), description = "Accumulo instance name")
   var instance: String = null
 
-  @Parameter(names = Array("-z", "--zookeepers"), description = "Zookeepers (host:port, comma separated)")
+  @Parameter(names = Array("-z", "--zookeepers"), description = "Zookeepers (host[:port], comma separated)")
   var zookeepers: String = null
 
   @Parameter(names = Array("-a", "--auths"), description = "Accumulo authorizations")

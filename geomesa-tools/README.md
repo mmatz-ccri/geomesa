@@ -126,7 +126,8 @@ To ask GeoMesa how it intends to satisfy a given query, use the `explain` comman
     * -c, --catalog          Catalog table name for GeoMesa
     *     --cql              CQL predicate
     * -f, --feature-name     Simple Feature Type name on which to operate
-      -i, --instance         Accumulo instance name      --mock     Run everything with a mock accumulo instance instead of a real one     Default: false
+      -i, --instance         Accumulo instance name      
+      --mock                 Run everything with a mock accumulo instance instead of a real one     Default: false
     * -p, --password         Accumulo password
     * -u, --user             Accumulo user name
       -v, --visibilities     Accumulo scan visibilities
@@ -188,35 +189,41 @@ The file type is inferred from the extension of the file, so ensure that the for
 
 with the following parameters:
  
-`-c` or `--catalog` The accumulo table name, the table will be created if not already extant.  
-`-a` or `--auths` The optional accumulo authorizations to use.  
-`-v` or `--visibilities` The optional accumulo visibilities to use.  
-`-i` or `--indexSchemaFormat` The optional accumulo index schema format to use instead of the default. This option and the `--shards` cannot be provided together.  
-`--shards` The optional number of shards to use for this catalog. If catalog exists Ingest defaults to number of shards used in extant schema. 
-This option and the `--indexSchemaFormat` cannot be provided together and Ingest exits if this occurs.  
-`-f` or `--feature-name` The name of the SimpleFeatureType to be used.  
-`-s` or `--sftspec` The SimpleFeatureType of the CSV or TSV file, this must match exactly with the number and order
-of columns and data formats in the file (or columns list if `--cols` is specified) being ingested and must also
-include a default geometry field. If attempting to ingest files with explicit latitude and longitude columns, the sft
-spec must include an additional attribute beyond the number of columns in the file such as: `*geom:Point` in order for it to work.  
-`--cols` The optional subset of columns to be ingested which must match `-s` or `--sfcspec`. It is a list of
-comma-separated column-ranges. Each column-range has format `num1[-num2]` that defines a column by
-num1 or a column range by num1 and num2 if num2 is presented. For example, "0,3,6-8,10,15-17" gives result
-List(0, 3, 6, 7, 8, 10, 15, 16, 17).
-`--datetime` The optional name of the field in the SFT specification that corresponds to the *time* column. **NOTE:** by default times are assumed to be UTC, please specify a specific timezone here and update the dtformat if this is not desired.  
-`--dtformat` The optional Joda DateTimeFormat quote-wrapped string for the date-time field, e.g.: "MM/dd/yyyy HH:mm:ss". Defaults to millisecond epoch format.  
-`--idfields` The optional comma separated list of ID fields used to generate the feature IDs. If empty, it is assumed that the ID will be generated via a hash on all attributes of that line.  
-`-h` or `--hash` The optional flag to hash the value of the feature id generated from idfields.  
-`--lon` The optional name of the longitude field. This field is not required for ingesting WKT geometries.  
-`--lat` The optional name of the latitude field. This field is not required for ingesting WKT geometries.  
-`--file` The file path or hdfs path to the csv file or tsv file being ingested.  
+      -a, --auths           Accumulo authorizations
+    * -c, --catalog         Catalog table name for GeoMesa
+      --cols, --columns     the set of column indexes to be ingested, must match the     SimpleFeatureType spec
+      --dtField             DateTime field name to use as the default dtg
+      --dtFormat            format string for the date time field
+    * -f, --feature-name    Simple Feature Type name on which to operate
+      --format              format of incoming data (csv | tsv | shp) to override file extension     recognition
+      --hash                flag to toggle using md5hash as the feature id     Default: false
+      --idFields            the set of attributes to combine together to create a unique id for the feature
+      --indexSchema         GeoMesa index schema format string
+      -i, --instance        Accumulo instance name
+      --lat                 name of the latitude field in the SimpleFeatureType if ingesting point     data
+      --lon                 name of the longitude field in the SimpleFeatureType if ingesting point data
+      --mock                Run everything with a mock accumulo instance instead of a real one Default: false
+    * -p, --password        Accumulo password
+      --shards              Number of shards to use for the storage tables (defaults to number of tservers)
+    * -s, --spec            SimpleFeatureType specification
+      --useSharedTables     Use shared tables in Accumulo for feature storage (default false) Default: true
+    * -u, --user            Accumulo user name
+      -v, --visibilities    Accumulo scan visibilities
+      -z, --zookeepers      Zookeepers (host[:port], comma separated 
 
 ### list
 To list the features on a specified catalog table, use the `list` command.  
-#### Required flags: 
-Specify the catalog table to use with `-c` or `--catalog`.
-#### Optional flags:
-To pipe the output of the command, use `-q` or `--quiet`.
+#### Usage:
+
+      -a, --auths           Accumulo authorizations
+    * -c, --catalog         Catalog table name for GeoMesa
+      -i, --instance        Accumulo instance name
+      --mock                Run everything with a mock accumulo instance instead of a real one     Default: false
+    * -p, --password        Accumulo password
+    * -u, --user            Accumulo user name
+      -v, --visibilities    Accumulo scan visibilities
+      -z, --zookeepers      Zookeepers (host:port, comma separated)
+
 #### Example command:
     geomesa list -u username -p password -c test_catalog
     
