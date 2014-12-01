@@ -17,19 +17,29 @@
 
 package org.locationtech.geomesa.raster.data
 
-import org.apache.accumulo.core.client.{TableExistsException, BatchWriterConfig, Connector}
-import org.apache.accumulo.core.data.{Value, Mutation}
-import org.apache.accumulo.core.security.{TablePermission, ColumnVisibility}
+import java.awt.image.RenderedImage
+import java.util
+import java.util.Map.Entry
+
+import org.apache.accumulo.core.client.{BatchWriterConfig, Connector, TableExistsException}
+import org.apache.accumulo.core.data.{Key, Mutation, Value}
+import org.apache.accumulo.core.security.{Authorizations, ColumnVisibility, TablePermission}
 import org.apache.hadoop.io.Text
 import org.geotools.coverage.grid.GridCoverage2D
 import org.joda.time.DateTime
 import org.locationtech.geomesa.core.security.AuthorizationsProvider
+import org.locationtech.geomesa.plugin.ImageUtils._
+import org.locationtech.geomesa.raster.feature.GeoMesaChunk
+import org.locationtech.geomesa.raster.index.RasterIndexEntry
 import org.locationtech.geomesa.raster.ingest.RasterMetadata
 import org.locationtech.geomesa.raster.util.RasterUtils
 import org.locationtech.geomesa.utils.geohash.GeoHash
 
+import scala.collection.JavaConversions._
+
 trait CoverageOperations {
   def saveChunk(raster: GridCoverage2D, rm: RasterMetadata, visibilities: String): Unit
+  def getRasters(): Iterator[GeoMesaChunk]
 }
 
 class AccumuloCoverageOperations(connector: Connector,
@@ -99,6 +109,22 @@ class AccumuloCoverageOperations(connector: Connector,
       } catch {
         case e: TableExistsException => // this can happen with multiple threads but shouldn't cause any issues
       }
+    }
+  }
+
+  def getRasters(): Iterator[GeoMesaChunk] = {
+    val scanner = connector.createScanner(coverageTable, new Authorizations())
+
+    val iter: util.Iterator[Entry[Key, Value]] = scanner.iterator()
+
+    iter.map { entry =>
+
+      val key = entry.getKey
+
+      val chunk: RenderedImage = rasterImageDeserialize(entry.getValue.get)
+      val metadata: RasterIndexEntry.DecodedIndex = RasterIndexEntry.decodeIndexCQMetadata(entry.getKey)
+
+      GeoMesaChunk(chunk, metadata)
     }
   }
 }

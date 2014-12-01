@@ -25,6 +25,8 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.locationtech.geomesa.core.iterators.{AggregatingKeyIterator, SurfaceAggregatingIterator}
 import org.locationtech.geomesa.core.util.{BoundingBoxUtil, SelfClosingBatchScanner}
 import org.locationtech.geomesa.plugin.ImageUtils._
+import org.locationtech.geomesa.raster.data.AccumuloCoverageOperations
+import org.locationtech.geomesa.raster.feature.GeoMesaChunk
 import org.locationtech.geomesa.raster.index.RasterIndexEntry
 import org.locationtech.geomesa.utils.geohash.{BoundingBox, Bounds, GeoHash, TwoGeoHashBoundingBox}
 import org.opengis.coverage.grid.GridCoverage
@@ -100,7 +102,12 @@ class GeoMesaCoverageReader(val url: String, hints: Hints) extends AbstractGridC
     val max = Array(Math.min(env.getMaximum(0), 180) - .00000001, Math.min(env.getMaximum(1), 90) - .00000001)
     val bbox = BoundingBox(Bounds(min(0), max(0)), Bounds(min(1), max(1)))
     
-    val chunks = getChunks(geohash, getGeohashPrecision, None, bbox)
+    //val chunks = getChunks(geohash, getGeohashPrecision, None, bbox)
+
+    val aco: AccumuloCoverageOperations = ??? //new AccumuloCoverageOperations
+
+    val chunks: Iterator[GeoMesaChunk] = aco.getRasters()
+
     val image = mosaicGridCoverages(chunks, env = env)
     this.coverageFactory.create(coverageName, image, env)
   }
@@ -180,12 +187,12 @@ class GeoMesaCoverageReader(val url: String, hints: Hints) extends AbstractGridC
     SelfClosingBatchScanner(scanner)
   }
 
-  def mosaicGridCoverages(coverageList: Iterator[GridCoverage], width: Int = 256, height: Int = 256, env: Envelope, startImage: BufferedImage = null) = {
+  def mosaicGridCoverages(coverageList: Iterator[GeoMesaChunk], width: Int = 256, height: Int = 256, env: Envelope, startImage: BufferedImage = null) = {
     val image = if (startImage == null) { getEmptyImage(width, height) } else { startImage }
     while (coverageList.hasNext) {
       val coverage = coverageList.next()
-      val coverageEnv = coverage.getEnvelope
-      val coverageImage = coverage.getRenderedImage
+      val coverageEnv = coverage.envelope
+      val coverageImage = coverage.chunk
       val posx = ((coverageEnv.getMinimum(0) - env.getMinimum(0)) / 1.0).asInstanceOf[Int]
       val posy = ((env.getMaximum(1) - coverageEnv.getMaximum(1)) / 1.0).asInstanceOf[Int]
       image.getRaster.setDataElements(posx, posy, coverageImage.getData)
