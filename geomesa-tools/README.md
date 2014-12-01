@@ -115,7 +115,7 @@ To create a new feature on a specified catalog table, use the `create` command.
 
 
 #### Example command:
-    geomesa create -u username -p password -c test_create -f testing -s fid:String:index=true,dtg:Date,geom:Point:srid=4326 -d dtg
+    geomesa create -u username -p password -c test_create -f testing -s fid:String:index=true,dtg:Date,geom:Point:srid=4326 --dtg dtg
 
 ### delete
 To delete a feature on a specified catalog table, use the `delete` command.
@@ -142,7 +142,8 @@ To describe the attributes of a feature on a specified catalog table, use the `d
       -a, --auths           Accumulo authorizations
     * -c, --catalog         Catalog table name for GeoMesa
     * -f, --feature-name    Simple Feature Type name on which to operate
-      -i, --instance        Accumulo instance name      --mock     Run everything with a mock accumulo instance instead of a real one     Default: false
+      -i, --instance        Accumulo instance name      
+      --mock                Run everything with a mock accumulo instance instead of a real one     Default: false
     * -p, --password        Accumulo password
     * -u, --user            Accumulo user name
       -v, --visibilities    Accumulo scan visibilities
@@ -274,7 +275,7 @@ To list, describe, and update the configuration parameters on a specified table,
         -i, --instance          Accumulo instance name        
         --mock                  Run everything with a mock accumulo instance instead of a real one Default: false
       * -p, --password          Accumulo password
-      * -s, --suffix            Table suffix to operate on (attr_idx, st_idx, or records)
+      * -t, --table-suffix      Table suffix to operate on (attr_idx, st_idx, or records)
       * -u, --user              Accumulo user name
         -v, --visibilities      Accumulo scan visibilities
         -z, --zookeepers        Zookeepers (host:port, comma separated)
@@ -289,7 +290,7 @@ To list, describe, and update the configuration parameters on a specified table,
         --mock                  Run everything with a mock accumulo instance instead of a real one Default: false
       * --param                 Accumulo table configuration param name (e.g. table.bloom.enabled)
       * -p, --password          Accumulo password
-      * -s, --suffix            Table suffix to operate on (attr_idx, st_idx, or records)
+      * -t, --table-suffix      Table suffix to operate on (attr_idx, st_idx, or records)
       * -u, --user              Accumulo user name
         -v, --visibilities      Accumulo scan visibilities
         -z, --zookeepers        Zookeepers (host:port, comma separated)
@@ -305,7 +306,7 @@ To list, describe, and update the configuration parameters on a specified table,
       * -n, --new-value         New value of the property
       * --param                 Accumulo table configuration param name (e.g. table.bloom.enabled)
       * -p, --password          Accumulo password
-      * -s, --suffix            Table suffix to operate on (attr_idx, st_idx, or records)
+      * -t, --table-suffix      Table suffix to operate on (attr_idx, st_idx, or records)
       * -u, --user              Accumulo user name
         -v, --visibilities      Accumulo scan visibilities
         -z, --zookeepers        Zookeepers (host:port, comma separated)

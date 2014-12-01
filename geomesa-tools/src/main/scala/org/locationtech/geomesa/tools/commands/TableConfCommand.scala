@@ -106,11 +106,11 @@ class TableConfCommand(parent: JCommander) extends Command with Logging {
     }
 
   def getTableName(params: ListParams)(implicit ds: AccumuloDataStore) =
-    params.suffix match {
+    params.tableSuffix match {
       case TableSuffix.STIdx   => ds.getSpatioTemporalIdxTableName(params.featureName)
       case TableSuffix.AttrIdx => ds.getAttrIdxTableName(params.featureName)
       case TableSuffix.Records => ds.getRecordTableForType(params.featureName)
-      case _                   => throw new Exception(s"Invalid table suffix: ${params.suffix}")
+      case _                   => throw new Exception(s"Invalid table suffix: ${params.tableSuffix}")
     }
 
 }
@@ -126,8 +126,8 @@ object TableConfCommand {
 
   @Parameters(commandDescription = "List the configuration parameters for a geomesa table")
   class ListParams extends FeatureParams {
-    @Parameter(names = Array("-s", "--suffix"), description = "Table suffix to operate on (attr_idx, st_idx, or records)", required = true)
-    var suffix: String = null
+    @Parameter(names = Array("-t", "--table-suffix"), description = "Table suffix to operate on (attr_idx, st_idx, or records)", required = true)
+    var tableSuffix: String = null
   }
 
   @Parameters(commandDescription = "Describe a given configuration parameter for a table")
