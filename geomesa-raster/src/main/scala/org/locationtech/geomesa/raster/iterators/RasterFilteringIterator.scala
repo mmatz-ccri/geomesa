@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.locationtech.geomesa.core.iterators
+package org.locationtech.geomesa.raster.iterators
 
 import java.util.{Date, Map => JMap}
 
@@ -25,18 +25,21 @@ import org.apache.accumulo.core.iterators.{Filter, IteratorEnvironment, SortedKe
 import org.geotools.feature.simple.SimpleFeatureBuilder
 import org.geotools.filter.text.ecql.ECQL
 import org.locationtech.geomesa.core._
-import org.locationtech.geomesa.core.index.IndexEntry.DecodedIndex
 import org.locationtech.geomesa.core.index._
+import org.locationtech.geomesa.core.iterators.IteratorHelpers
+import org.locationtech.geomesa.raster.index.RasterIndexEntry
+import org.locationtech.geomesa.raster.index.RasterIndexEntry.DecodedIndex
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.opengis.feature.simple.SimpleFeature
 
-class AttributeIndexFilteringIterator extends Filter with Logging {
+
+class RasterFilteringIterator extends Filter with Logging {
 
   protected var filter: org.opengis.filter.Filter = null
   protected var testSimpleFeature: SimpleFeature = null
   protected var dateAttributeName: Option[String] = None
 
-  // NB: This is duplicated code from the STII.  Consider refactoring.
+  // NB: This is duplicated in the AIFI.  Consider refactoring.
   lazy val wrappedSTFilter: (Geometry, Option[Long]) => Boolean = {
     if (filter != null && testSimpleFeature != null) {
       (geom: Geometry, olong: Option[Long]) => {
@@ -56,33 +59,37 @@ class AttributeIndexFilteringIterator extends Filter with Logging {
 
   override def init(source: SortedKeyValueIterator[Key, Value],
                     options: JMap[String, String],
-                    env: IteratorEnvironment) {
+                    env: IteratorEnvironment) = {
     super.init(source, options, env)
-    // NB: This is copied code from the STII.  Consider refactoring.
+
     if (options.containsKey(DEFAULT_FILTER_PROPERTY_NAME) && options.containsKey(GEOMESA_ITERATORS_SIMPLE_FEATURE_TYPE)) {
-      val featureType = SimpleFeatureTypes.createType("DummyType", options.get(GEOMESA_ITERATORS_SIMPLE_FEATURE_TYPE))
+      val simpleFeatureTypeSpec = options.get(GEOMESA_ITERATORS_SIMPLE_FEATURE_TYPE)
+      val featureType = SimpleFeatureTypes.createType("RasterType", simpleFeatureTypeSpec)
+
       featureType.decodeUserData(options, GEOMESA_ITERATORS_SIMPLE_FEATURE_TYPE)
       dateAttributeName = getDtgFieldName(featureType)
 
-      val filterString  = options.get(DEFAULT_FILTER_PROPERTY_NAME)
+      val filterString = options.get(DEFAULT_FILTER_PROPERTY_NAME)
       filter = ECQL.toFilter(filterString)
-      logger.debug(s"In AIFI with $filter")
+      logger.debug(s"In RFI with $filter")
       val sfb = new SimpleFeatureBuilder(featureType)
-
       testSimpleFeature = sfb.buildFeature("test")
+
     }
   }
 
   override def deepCopy(env: IteratorEnvironment) = {
-    val copy = super.deepCopy(env).asInstanceOf[AttributeIndexFilteringIterator]
+    val copy = super.deepCopy(env).asInstanceOf[RasterFilteringIterator]
     copy.filter = filter
     copy.testSimpleFeature = testSimpleFeature
     copy
   }
 
   override def accept(k: Key, v: Value): Boolean = {
-    val DecodedIndex(_, geom, dtgOpt) = IndexEntry.decodeIndexValue(v)
+    val DecodedIndex(_, geom, dtgOpt) = RasterIndexEntry.decodeIndexCQMetadata(k)
     wrappedSTFilter(geom, dtgOpt)
   }
+
 }
 
+object RasterFilteringIterator extends IteratorHelpers { }
