@@ -16,7 +16,7 @@
 
 package org.locationtech.geomesa.tools
 
-import java.io.File
+import java.io.{BufferedReader, File, InputStreamReader}
 import java.util.UUID
 
 import com.typesafe.scalalogging.slf4j.Logging
@@ -87,11 +87,25 @@ object Utils {
 
 }
 
+/* get password trait */
+trait GetPassword {
+  def getPassword(pass: String) = Option(pass).getOrElse({
+    if (System.console() != null) {
+      System.err.print("Password (mask enabled)> ")
+      System.console().readPassword().mkString
+    } else {
+      System.err.print("Password (mask disabled when redirecting output)> ")
+      val reader = new BufferedReader(new InputStreamReader(System.in))
+      reader.readLine()
+    }
+  })
+}
+
 /**
  * Loads accumulo properties for instance and zookeepers from the accumulo installation found via
  * the system path in ACCUMULO_HOME in the case that command line parameters are not provided
  */
-trait AccumuloProperties extends Logging {
+trait AccumuloProperties extends GetPassword with Logging {
   lazy val accumuloConf = XML.loadFile(s"${System.getenv("ACCUMULO_HOME")}/conf/accumulo-site.xml")
 
   lazy val zookeepersProp =

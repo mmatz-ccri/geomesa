@@ -32,7 +32,7 @@ import scala.collection.JavaConversions._
 import scala.io.Source
 import scala.util.Try
 
-class DelimitedIngest(params: IngestParameters) extends AccumuloProperties{
+class DelimitedIngest(params: IngestParameters) extends AccumuloProperties {
 
   def run(): Unit = {
     // create schema for the feature prior to Ingest job
@@ -78,7 +78,7 @@ class DelimitedIngest(params: IngestParameters) extends AccumuloProperties{
       IngestParams.ZOOKEEPERS        -> Option(params.zookeepers).getOrElse(zookeepersProp),
       IngestParams.ACCUMULO_INSTANCE -> Option(params.instance).getOrElse(instanceName),
       IngestParams.ACCUMULO_USER     -> params.user,
-      IngestParams.ACCUMULO_PASSWORD -> params.password,
+      IngestParams.ACCUMULO_PASSWORD -> getPassword(params.password),
       IngestParams.DO_HASH           -> params.hash.toString,
       IngestParams.FORMAT            -> getFileExtension(params.files(0)),
       IngestParams.FEATURE_NAME      -> params.featureName,

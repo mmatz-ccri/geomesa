@@ -34,7 +34,7 @@ class DataStoreHelper(params: GeoMesaParams) extends AccumuloProperties {
         dsParams.instanceIdParam.getName   -> instance,
         dsParams.zookeepersParam.getName   -> zookeepersString,
         dsParams.userParam.getName         -> params.user,
-        dsParams.passwordParam.getName     -> params.password,
+        dsParams.passwordParam.getName     -> getPassword(params.password),
         dsParams.tableNameParam.getName    -> params.catalog,
         dsParams.visibilityParam.getName   -> Option(params.visibilities).orNull,
         dsParams.authsParam.getName        -> Option(params.auths).orNull,

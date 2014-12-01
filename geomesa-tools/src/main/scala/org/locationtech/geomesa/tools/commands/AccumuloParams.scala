@@ -21,7 +21,7 @@ class AccumuloParams {
   @Parameter(names = Array("-u", "--user"), description = "Accumulo user name", required = true)
   var user: String = null
 
-  @Parameter(names = Array("-p", "--password"), description = "Accumulo password", required = true)
+  @Parameter(names = Array("-p", "--password"), description = "Accumulo password (will prompt if not supplied)")
   var password: String = null
 
   @Parameter(names = Array("-i", "--instance"), description = "Accumulo instance name")
