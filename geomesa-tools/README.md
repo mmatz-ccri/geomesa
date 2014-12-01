@@ -45,7 +45,27 @@ This should print out the following usage text:
 This usage text lists the available commands. To see help for an individual command run `geomesa help <command-name>` which for example
 will give you something like this:
 
-
+    bash$ geomesa help list
+    List GeoMesa features for a given catalog
+    Usage: list [options]
+      Options:
+        -a, --auths
+           Accumulo authorizations
+      * -c, --catalog
+           Catalog table name for GeoMesa
+        -i, --instance
+           Accumulo instance name
+            --mock
+           Run everything with a mock accumulo instance instead of a real one
+           Default: false
+      * -p, --password
+           Accumulo password
+      * -u, --user
+           Accumulo user name
+        -v, --visibilities
+           Accumulo scan visibilities
+        -z, --zookeepers
+           Zookeepers (host[:port], comma separated)
 
 The Accumulo username and password is required for each command. Specify the username and password
 in each command by using `-u` or `--username `and `-p` or `--password`, respectively. One can also only specify the username
@@ -56,10 +76,23 @@ A test script is included under `geomesa\bin\geomesa-test-script.sh` that runs e
 by including your Accumulo username, password, test catalog table, test feature name, and test SFT specification. Default values
 are already included in the script. Then, run the script from the command line to ensure there are no errors in the output text. 
 
-In all commands below, one can add `--instance-name`, `--zookeepers`, `--auths`, and `--visibilities` arguments
+In all commands below, one can add `--instance-name`, `--zookeepers`, `--auths`, and `--visibilities` (or in short form `-i, -z, -a, -v`) arguments
 to properly configure the Accumulo data store connector. The Accumulo instance name and Zookeepers string can usually
 be automatically assigned as long as Accumulo is configured correctly. The Auths and Visibilities strings will have to
 be added as arguments to each command, if needed.
+
+###Enabling Shape File Support
+Due to licensing restrictions, a necessary dependency (jai-core) for shape file support must be manually installed:
+    
+    <dependency>
+      <groupId>javax.media</groupId>
+      <artifactId>jai_core</artifactId>
+      <version>1.1.3</version>
+    </dependency>
+    
+This library can be downloaded from your local nexus repo or `http://download.java.net/media/jai/builds/release/1_1_3/jai-1_1_3-lib.zip`
+
+To install, copy the jai_core.jar and jai_code.jar into $GEOMESA_HOME/lib/
 
 ## Command Explanations and Usage
 
