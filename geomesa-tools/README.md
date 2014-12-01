@@ -94,6 +94,18 @@ This library can be downloaded from your local nexus repo or `http://download.ja
 
 To install, copy the jai_core.jar and jai_code.jar into $GEOMESA_HOME/lib/
 
+###Logging configuration
+GeoMesa tools comes bundled by default with an slf4j implementation that is installed to the $GEOMESA_HOME/lib directory
+ named `slf4j-log4j12-1.7.5.jar` If you already have an slf4j implementation installed on your Java Classpath you may
+ see errors at runtime and will have to exclude one of the jars. This can be done by simply renaming the bundled
+ `slf4j-log4j12-1.7.5.jar` file to `slf4j-log4j12-1.7.5.jar.exclude`
+ 
+Note that if no slf4j implementation is installed you will see this error:
+
+    SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+    SLF4J: Defaulting to no-operation (NOP) logger implementation
+    SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+
 ## Command Explanations and Usage
 
 ### create
