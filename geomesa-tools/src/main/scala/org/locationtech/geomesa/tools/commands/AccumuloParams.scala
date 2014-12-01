@@ -51,12 +51,12 @@ class FeatureParams extends GeoMesaParams{
 }
 
 class RequiredCqlFilterParameters extends FeatureParams{
-  @Parameter(names = Array("--cql"), description = "CQL predicate", required = true)
+  @Parameter(names = Array("-q", "--cql"), description = "CQL predicate", required = true)
   var cqlFilter: String = null
 }
 
 class OptionalCqlFilterParameters extends FeatureParams{
-  @Parameter(names = Array("--cql"), description = "CQL predicate")
+  @Parameter(names = Array("-q", "--cql"), description = "CQL predicate")
   var cqlFilter: String = null
 }
 
@@ -64,7 +64,7 @@ class CreateFeatureParams extends FeatureParams {
   @Parameter(names = Array("-s", "--spec"), description = "SimpleFeatureType specification", required = true)
   var spec: String = null
 
-  @Parameter(names = Array("--dtField"), description = "DateTime field name to use as the default dtg")
+  @Parameter(names = Array("--dtg"), description = "DateTime field name to use as the default dtg")
   var dtgField: String = null
 
   @Parameter(names = Array("--useSharedTables"), description = "Use shared tables in Accumulo for feature storage")

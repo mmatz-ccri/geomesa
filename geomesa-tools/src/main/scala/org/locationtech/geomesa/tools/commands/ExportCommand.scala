@@ -59,6 +59,7 @@ class ExportCommand(parent: JCommander) extends Command with Logging {
     }
     try {
       exporter.write(features)
+      logger.info("Feature export complete to " + (if (usefile) params.file.getPath else "standard out"))
     } finally {
       exporter.flush()
       exporter.close()
@@ -122,6 +123,8 @@ class ExportCommand(parent: JCommander) extends Command with Logging {
     case Some(file) => file
     case None       => throw new Exception("Error: --file option required")
   }
+
+  def usefile = Option(params.file).nonEmpty
 }
 
 object ExportCommand {
@@ -129,29 +132,29 @@ object ExportCommand {
 
   @Parameters(commandDescription = "Export a GeoMesa feature")
   class ExportParameters extends OptionalCqlFilterParameters {
-    @Parameter(names = Array("--format"), description = "Format to export (csv|tsv|gml|json|shp)", required = true)
+    @Parameter(names = Array("-o", "--format"), description = "Format to export (csv|tsv|gml|json|shp)", required = true)
     var format: String = null
 
     @Parameter(names = Array("-m", "--maxFeatures"), description = "Maximum number of features to return. default: Long.MaxValue")
     var maxFeatures: Integer = Int.MaxValue
 
-    @Parameter(names = Array("-attrs", "--attributes"), description = "Attributes from feature to export " +
+    @Parameter(names = Array("--attrs"), description = "Attributes from feature to export " +
       "(comma-separated)...Comma-separated expressions with each in the format " +
       "attribute[=filter_function_expression]|derived-attribute=filter_function_expression. " +
       "filter_function_expression is an expression of filter function applied to attributes, literals " +
       "and filter functions, i.e. can be nested")
     var attributes: String = null
 
-    @Parameter(names = Array("-id", "--idAttribute"), description = "name of the id attribute to export")
+    @Parameter(names = Array("--id"), description = "name of the id attribute to export")
     var idAttribute: String = null
 
-    @Parameter(names = Array("-lat", "--latAttribute"), description = "name of the latitude attribute to export")
+    @Parameter(names = Array("--lat"), description = "name of the latitude attribute to export")
     var latAttribute: String = null
 
-    @Parameter(names = Array("-lon", "--lonAttribute"), description = "name of the longitude attribute to export")
+    @Parameter(names = Array("--lon"), description = "name of the longitude attribute to export")
     var lonAttribute: String = null
 
-    @Parameter(names = Array("-dtg", "--dateAttribute"), description = "name of the date attribute to export")
+    @Parameter(names = Array("--dtg"), description = "name of the date attribute to export")
     var dateAttribute: String = null
 
     @Parameter(names = Array("--file"), description = "name of the file to output to instead of std out")

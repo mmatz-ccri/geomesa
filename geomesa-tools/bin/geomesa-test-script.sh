@@ -30,7 +30,7 @@ FEATURENAME=test_feature
 MAXFEATURES=100
 
 set -x
-geomesa create -u ${USERNAME} -p ${PASSWORD} -c ${CREATE_CATALOG} -f ${CREATE_FEATURENAME} -s ${SPEC} -d dtg
+geomesa create -u ${USERNAME} -p ${PASSWORD} -c ${CREATE_CATALOG} -f ${CREATE_FEATURENAME} -s ${SPEC} -dtg dtg
 geomesa list -u ${USERNAME} -p ${PASSWORD} -c ${CATALOG}
 geomesa describe -u ${USERNAME} -p ${PASSWORD} -c ${CATALOG} -f ${FEATURENAME}
 geomesa explain -u ${USERNAME} -p ${PASSWORD} -c ${CATALOG} -f ${FEATURENAME} -q include

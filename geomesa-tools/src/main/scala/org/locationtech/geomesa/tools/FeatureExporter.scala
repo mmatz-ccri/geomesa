@@ -141,7 +141,7 @@ class DelimitedExport(writer: Writer,
       count += 1
       if (count % 10000 == 0) logger.info("wrote {} features", "" + count)
     }
-    logger.info(s"Successfully wrote $count features to output stream")
+    logger.info(s"Exported $count features")
   }
 
   val getGeom: SimpleFeature => Option[Geometry] =
