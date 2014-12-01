@@ -126,7 +126,7 @@ object TableConfCommand {
 
   @Parameters(commandDescription = "List the configuration parameters for a geomesa table")
   class ListParams extends FeatureParams {
-    @Parameter(names = Array("--suffix", "-s"), description = "Table suffix to operate on (attr_idx, st_idx, or records)", required = true)
+    @Parameter(names = Array("-s", "--suffix"), description = "Table suffix to operate on (attr_idx, st_idx, or records)", required = true)
     var suffix: String = null
   }
 
@@ -138,7 +138,7 @@ object TableConfCommand {
 
   @Parameters(commandDescription = "Update a given table configuration parameter")
   class UpdateParams extends DescribeParams {
-    @Parameter(names = Array("--new-value", "-n"), description = "New value of the property)", required = true)
+    @Parameter(names = Array("-n", "--new-value"), description = "New value of the property", required = true)
     var newValue: String = null
   }
 }

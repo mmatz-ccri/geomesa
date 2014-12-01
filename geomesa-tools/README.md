@@ -233,47 +233,47 @@ To list, describe, and update the configuration parameters on a specified table,
 ####Usage
 
     list      List the configuration parameters for a geomesa table
-        Usage: list [options]
-        Options:
+      Usage: list [options]
+      Options:
         -a, --auths             Accumulo authorizations
-        * -c, --catalog         Catalog table name for GeoMesa
-        * -f, --feature-name    Simple Feature Type name on which to operate
+      * -c, --catalog           Catalog table name for GeoMesa
+      * -f, --feature-name      Simple Feature Type name on which to operate
         -i, --instance          Accumulo instance name        
         --mock                  Run everything with a mock accumulo instance instead of a real one Default: false
-        * -p, --password        Accumulo password
-        * --suffix, -s          Table suffix to operate on (attr_idx, st_idx, or records)
-        * -u, --user            Accumulo user name
+      * -p, --password          Accumulo password
+      * -s, --suffix            Table suffix to operate on (attr_idx, st_idx, or records)
+      * -u, --user              Accumulo user name
         -v, --visibilities      Accumulo scan visibilities
         -z, --zookeepers        Zookeepers (host:port, comma separated)
     
     describe      Describe a given configuration parameter for a table
-        Usage: describe [options]
-        Options:
+      Usage: describe [options]
+      Options:
         -a, --auths             Accumulo authorizations
-        * -c, --catalog         Catalog table name for GeoMesa
-        * -f, --feature-name    Simple Feature Type name on which to operate
+      * -c, --catalog           Catalog table name for GeoMesa
+      * -f, --feature-name      Simple Feature Type name on which to operate
         -i, --instance          Accumulo instance name        
         --mock                  Run everything with a mock accumulo instance instead of a real one Default: false
-        *     --param           Accumulo table configuration param name (e.g. table.bloom.enabled)
-        * -p, --password        Accumulo password
-        * --suffix, -s          Table suffix to operate on (attr_idx, st_idx, or records)
-        * -u, --user            Accumulo user name
+      * --param                 Accumulo table configuration param name (e.g. table.bloom.enabled)
+      * -p, --password          Accumulo password
+      * -s, --suffix            Table suffix to operate on (attr_idx, st_idx, or records)
+      * -u, --user              Accumulo user name
         -v, --visibilities      Accumulo scan visibilities
         -z, --zookeepers        Zookeepers (host:port, comma separated)
     
     update      Update a given table configuration parameter
-        Usage: update [options]
-        Options:
+      Usage: update [options]
+      Options:
         -a, --auths             Accumulo authorizations
-        * -c, --catalog         Catalog table name for GeoMesa
-        * -f, --feature-name    Simple Feature Type name on which to operate
+      * -c, --catalog           Catalog table name for GeoMesa
+      * -f, --feature-name      Simple Feature Type name on which to operate
         -i, --instance          Accumulo instance name        
         --mock                  Run everything with a mock accumulo instance instead of a real one Default: false
-        * --new-value, -n       New value of the property)
-        *     --param           Accumulo table configuration param name (e.g. table.bloom.enabled)
-        * -p, --password        Accumulo password
-        * --suffix, -s          Table suffix to operate on (attr_idx, st_idx, or records)
-        * -u, --user            Accumulo user name
+      * -n, --new-value         New value of the property
+      * --param                 Accumulo table configuration param name (e.g. table.bloom.enabled)
+      * -p, --password          Accumulo password
+      * -s, --suffix            Table suffix to operate on (attr_idx, st_idx, or records)
+      * -u, --user              Accumulo user name
         -v, --visibilities      Accumulo scan visibilities
         -z, --zookeepers        Zookeepers (host:port, comma separated)
 
