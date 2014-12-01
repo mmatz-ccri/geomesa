@@ -24,6 +24,7 @@ import org.geotools.data.simple.SimpleFeatureCollection
 import org.geotools.filter.text.cql2.CQL
 import org.joda.time.DateTime
 import org.locationtech.geomesa.core.data.AccumuloFeatureStore
+import org.locationtech.geomesa.tools.Utils.Formats
 import org.locationtech.geomesa.tools.Utils.Formats._
 import org.locationtech.geomesa.tools._
 import org.locationtech.geomesa.tools.commands.ExportCommand.{Command, ExportParameters}
@@ -54,7 +55,7 @@ class ExportCommand(parent: JCommander) extends Command with Logging {
       case GeoJson | JSON  => new GeoJsonExport(getWriter())
       case GML             => new GmlExport(getOutputStream())
       case _ =>
-        throw new IllegalArgumentException("Unsupported export format. Supported formats are shp, geojson, csv, and gml.")
+        throw new IllegalArgumentException(s"Unsupported export format. Supported formats are: ${Formats.All.mkString(",")}.")
     }
     try {
       exporter.write(features)
@@ -85,9 +86,15 @@ class ExportCommand(parent: JCommander) extends Command with Logging {
     val q = new Query(params.featureName, filter)
     q.setMaxFeatures(Option(params.maxFeatures).getOrElse(Query.DEFAULT_MAX.asInstanceOf[Integer]).toInt)
 
-    val attributesO = if (overrideAttributes.isDefined) overrideAttributes
-    else if (Option(params.attributes).isDefined) Some(params.attributes)
-    else None
+    val attributesO =
+      if (overrideAttributes.isDefined) {
+        overrideAttributes
+      } else if (Option(params.attributes).isDefined) {
+        Some(params.attributes)
+      } else {
+        None
+      }
+
     //Split attributes by "," meanwhile allowing to escape it by "\,".
     attributesO.foreach { attributes =>
       q.setPropertyNames(attributes.split("""(?<!\\),""").map(_.trim.replace("\\,", ",")))
@@ -113,8 +120,7 @@ class ExportCommand(parent: JCommander) extends Command with Logging {
   
   def getFile(): File = Option(params.file) match {
     case Some(file) => file
-    case None       =>
-      throw new Exception("Error: --file option required")
+    case None       => throw new Exception("Error: --file option required")
   }
 }
 
@@ -126,26 +132,26 @@ object ExportCommand {
     @Parameter(names = Array("--format"), description = "Format to export (csv|tsv|gml|json|shp)", required = true)
     var format: String = null
 
-    @Parameter(names = Array("--maxFeatures", "-m"), description = "Maximum number of features to return. default: Long.MaxValue")
+    @Parameter(names = Array("-m", "--maxFeatures"), description = "Maximum number of features to return. default: Long.MaxValue")
     var maxFeatures: Integer = Int.MaxValue
 
-    @Parameter(names = Array("--attributes", "-attrs"), description = "Attributes from feature to export " +
+    @Parameter(names = Array("-attrs", "--attributes"), description = "Attributes from feature to export " +
       "(comma-separated)...Comma-separated expressions with each in the format " +
       "attribute[=filter_function_expression]|derived-attribute=filter_function_expression. " +
       "filter_function_expression is an expression of filter function applied to attributes, literals " +
       "and filter functions, i.e. can be nested")
     var attributes: String = null
 
-    @Parameter(names = Array("--idAttribute", "-id"), description = "name of the id attribute to export")
+    @Parameter(names = Array("-id", "--idAttribute"), description = "name of the id attribute to export")
     var idAttribute: String = null
 
-    @Parameter(names = Array("--latAttribute", "-lat"), description = "name of the latitude attribute to export")
+    @Parameter(names = Array("-lat", "--latAttribute"), description = "name of the latitude attribute to export")
     var latAttribute: String = null
 
-    @Parameter(names = Array("--lonAttribute", "-lon"), description = "name of the longitude attribute to export")
+    @Parameter(names = Array("-lon", "--lonAttribute"), description = "name of the longitude attribute to export")
     var lonAttribute: String = null
 
-    @Parameter(names = Array("--dateAttribute", "-dtg"), description = "name of the date attribute to export")
+    @Parameter(names = Array("-dtg", "--dateAttribute"), description = "name of the date attribute to export")
     var dateAttribute: String = null
 
     @Parameter(names = Array("--file"), description = "name of the file to output to instead of std out")

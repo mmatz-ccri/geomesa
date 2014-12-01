@@ -32,8 +32,7 @@ class ExplainCommand(parent: JCommander) extends Command with Logging {
     try {
       val q = new Query(params.featureName, ECQL.toFilter(params.cqlFilter))
       val ds = new DataStoreHelper(params).ds
-      val t = Transaction.AUTO_COMMIT
-      val afr = ds.getFeatureReader(q, t).asInstanceOf[AccumuloFeatureReader]
+      val afr = ds.getFeatureReader(q, Transaction.AUTO_COMMIT).asInstanceOf[AccumuloFeatureReader]
       afr.explainQuery(q)
     } catch {
       case e: Exception =>

@@ -62,14 +62,16 @@ object FeatureCreator extends Logging {
 
       sharedTable.foreach { org.locationtech.geomesa.core.index.setTableSharing(sft, _) }
 
-      if (maxShards.isDefined)
+      if (maxShards.isDefined) {
         ds.createSchema(sft, maxShards.get)
-      else
+      } else {
         ds.createSchema(sft)
+      }
 
       if (ds.getSchema(featureName) != null) {
         logger.info(s"Feature '$featureName' on catalog table '$catalog' with spec " +
           s"'$spec' successfully created.")
+        println(s"Created feature $featureName")
       } else {
         logger.error(s"There was an error creating feature '$featureName' on catalog table " +
           s"'$catalog' with spec '$spec'. Please check that all arguments are correct " +

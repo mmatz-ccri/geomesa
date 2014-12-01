@@ -109,11 +109,10 @@ class DelimitedExport(writer: Writer,
                       lonAttribute: Option[String],
                       dtgAttribute: Option[String]) extends FeatureExporter with Logging {
 
-  val delimiter = 
-   format match {
-     case Formats.CSV => ","
-     case Formats.TSV => "\t"  
-   }
+  val delimiter = format match {
+   case Formats.CSV => ","
+   case Formats.TSV => "\t"
+  }
   lazy val dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
   lazy val geometryFactory = JTSFactoryFinder.getGeometryFactory
 
@@ -139,8 +138,8 @@ class DelimitedExport(writer: Writer,
     var count = 0
     features.features.foreach { sf =>
       writeFeature(sf, writer, attrNames, idField)
-      count = count + 1
-      if (count % 10000 == 0) logger.debug("wrote {} features", "" + count)
+      count += 1
+      if (count % 10000 == 0) logger.info("wrote {} features", "" + count)
     }
     logger.info(s"Successfully wrote $count features to output stream")
   }
@@ -158,7 +157,7 @@ class DelimitedExport(writer: Writer,
   val getDate: SimpleFeature => Option[Date] =
     (sf: SimpleFeature) =>
       dtgAttribute match {
-        case None => None
+        case None       => None
         case Some(attr) =>
           val date = sf.getAttribute(attr)
           if (date.isInstanceOf[Date]) {
@@ -181,23 +180,34 @@ class DelimitedExport(writer: Writer,
     getGeom(sf).map { geom => attrMap("*geom") = geom }
     getDate(sf).map { date => attrMap("dtg") = date }
 
-    // put the values into a checked list
-    val attributeValues = attrNames.map { a =>
-      val value = attrMap.getOrElse(a, null)
-      if (value == null) {
-        ""
-      } else if (value.isInstanceOf[java.util.Date]) {
-        dateFormat.format(value.asInstanceOf[java.util.Date])
+    // toString, escape, and join with delimiter
+    val escapedStrings = attrNames.map { n => escape(stringify(attrMap.getOrElse(n, null))) }
+    var first = true
+    for (s <- escapedStrings) {
+      if (first) {
+        writer.write(s)
+        first = false
       } else {
-        StringEscapeUtils.escapeCsv(value.toString)
+        writer.write(delimiter)
+        writer.write(s)
       }
     }
-
-    writer.write(attributeValues.mkString(delimiter))
     writer.write("\n")
   }
 
+  def stringify(o: Object): String = o match {
+    case null                      => ""
+    case d if d.isInstanceOf[Date] => dateFormat.format(o.asInstanceOf[java.util.Date])
+    case _                         => o.toString
+  }
+
+  val escape: String => String = format match {
+    case Formats.CSV => StringEscapeUtils.escapeCsv
+    case _           => (s: String) => s
+  }
+
   override def flush() = writer.flush()
+
   override def close() = {
     writer.flush()
     writer.close()

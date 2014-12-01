@@ -57,7 +57,7 @@ class DescribeCommand(parent: JCommander) extends Command with Logging {
       }
     } catch {
       case npe: NullPointerException =>
-        logger.error("Error: feature not found. Check arguments...", npe)
+        logger.error(s"Error: feature '${params.featureName}' not found. Check arguments...", npe)
       case e: Exception =>
         logger.error(s"Error describing feature '${params.featureName}': " + e.getMessage, e)
     }

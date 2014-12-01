@@ -73,6 +73,8 @@ object Utils {
         case _                           => "unknown"
       }
     }
+
+    val All = List(CSV, TSV, SHP, JSON, GeoJson, GML)
   }
 
   object Modes {
