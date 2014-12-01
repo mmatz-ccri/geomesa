@@ -132,8 +132,8 @@ object ExportCommand {
 
   @Parameters(commandDescription = "Export a GeoMesa feature")
   class ExportParameters extends OptionalCqlFilterParameters {
-    @Parameter(names = Array("-o", "--format"), description = "Format to export (csv|tsv|gml|json|shp)", required = true)
-    var format: String = null
+    @Parameter(names = Array("-o", "--format"), description = "Format to export (csv|tsv|gml|json|shp)")
+    var format: String = "csv"
 
     @Parameter(names = Array("-m", "--maxFeatures"), description = "Maximum number of features to return. default: Long.MaxValue")
     var maxFeatures: Integer = Int.MaxValue

@@ -58,7 +58,7 @@ object IngestCommand {
     @Parameter(names = Array("--dtFormat"), description = "format string for the date time field")
     var dtFormat: String = null
 
-    @Parameter(names = Array("--idFields"), description = "the set of attributes to combine together to create a unique id for the feature")
+    @Parameter(names = Array("--idFields"), description = "the set of attributes to combine together to create a unique id for the feature (comma separated)")
     var idFields: String = null
 
     @Parameter(names = Array("--hash"), description = "flag to toggle using md5hash as the feature id")
@@ -73,6 +73,7 @@ object IngestCommand {
     @Parameter(names = Array("--format"), description = "format of incoming data (csv | tsv | shp) to override file extension recognition")
     var format: String = null
 
+    // TODO GEOMESA-528 enable ingest of multiple files
     @Parameter(description = "<file>...", required = true)
     var files: java.util.List[File] = new util.ArrayList[File]()
   }

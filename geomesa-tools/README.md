@@ -30,6 +30,7 @@ Now, you should be able to use GeoMesa from any directory on your computer. To t
 
 This should print out the following usage text: 
 
+    bash$ geomesa
     Usage: geomesa [command] [command options]
       Commands:
         tableconf    Perform table configuration operations
@@ -113,7 +114,7 @@ To create a new feature on a specified catalog table, use the `create` command.
 #### Options (required options denoted with star)
       -a, --auths           Accumulo authorizations
     * -c, --catalog         Catalog table name for GeoMesa
-      --dtField             DateTime field name to use as the default dtg
+      --dtg                 DateTime field name to use as the default dtg
     * -f, --feature-name    Simple Feature Type name on which to operate
       -i, --instance        Accumulo instance name
       --mock                Run everything with a mock accumulo instance instead of a real one, Default: false
@@ -188,11 +189,11 @@ To export features, use the `export` command.
       --attrs               Attribute expression from feature to export (comma-separated)...see notes for syntax
       -a, --auths           Accumulo authorizations
     * -c, --catalog         Catalog table name for GeoMesa
-      --cql                 CQL predicate
+      -q, --cql             CQL predicate
       -dtg                  name of the date attribute to export
     * -f, --feature-name    Simple Feature Type name on which to operate
       --file                name of the file to output to instead of std out
-    * --format              Format to export (csv|tsv|gml|json|shp)
+      -o, --format          Format to export (csv|tsv|gml|json|shp) Default: csv
       -id                   name of the id attribute to export
       -i, --instance        Accumulo instance name
       -lat                  name of the latitude attribute to export
@@ -212,9 +213,9 @@ Attribute expressions are comma-separated expressions with each in the format
 `filter_function_expression` is an expression of filter function applied to attributes, literals and filter functions, i.e. can be nested
 
 #### Example commands:
-    geomesa export -u username -p password -c test_catalog -f test_feature -a "geom,text,user_name" -o csv -q "include" -m 100
-    geomesa export -u username -p password -c test_catalog -f test_feature -a "geom,text,user_name" -o gml -q "user_name='JohnSmith'"
-    geomesa export -u username -p password -c test_catalog -f test_featurel -a "user_name,buf=buffer(geom\, 2)"
+    geomesa export -u username -p password -c test_catalog -f test_feature --attrs "geom,text,user_name" -o csv -q "include" -m 100
+    geomesa export -u username -p password -c test_catalog -f test_feature --attrs "geom,text,user_name" -o gml -q "user_name='JohnSmith'"
+    geomesa export -u username -p password -c test_catalog -f test_featurel --attrs "user_name,buf=buffer(geom\, 2)"
     -o csv -q "[[ user_name like `John%' ] AND [ bbox(geom, 22.1371589, 44.386463, 40.228581, 52.379581, 'EPSG:4326') ]]"
     
 ### ingest
@@ -225,7 +226,7 @@ The file type is inferred from the extension of the file, so ensure that the for
 
 #### Usage
     geomesa ingest -u username -p password -c geomesa_catalog -f somefeaturename -s fid:Double,dtg:Date,*geom:Geometry 
-    --datetime dtg --dtformat "MM/dd/yyyy HH:mm:ss" --file hdsf:///some/hdfs/path/to/file.csv
+    --dtg dtg --dtformat "MM/dd/yyyy HH:mm:ss" --file hdsf:///some/hdfs/path/to/file.csv
     
     geomesa ingest -u username -p password -c geomesa_catalog  -a someAuths -v someVis --shards 42 -f somefeaturename
      -s fid:Double,dtg:Date,lon:Double,lat:Double,*geom:Point --datetime dtg --dtformat "MM/dd/yyyy HH:mm:ss" 
@@ -237,13 +238,13 @@ with the following parameters:
  
       -a, --auths           Accumulo authorizations
     * -c, --catalog         Catalog table name for GeoMesa
-      --cols, --columns     the set of column indexes to be ingested, must match the     SimpleFeatureType spec
-      --dtField             DateTime field name to use as the default dtg
+      --cols, --columns     the set of column indexes to be ingested, must match the SimpleFeatureType spec
+      --dtg                 DateTime field name to use as the default dtg
       --dtFormat            format string for the date time field
     * -f, --feature-name    Simple Feature Type name on which to operate
-      --format              format of incoming data (csv | tsv | shp) to override file extension     recognition
+      --format              format of incoming data (csv | tsv | shp) to override file extension recognition
       --hash                flag to toggle using md5hash as the feature id     Default: false
-      --idFields            the set of attributes to combine together to create a unique id for the feature
+      --idFields            the set of attributes to combine together to create a unique id for the feature (comma separated)
       --indexSchema         GeoMesa index schema format string
       -i, --instance        Accumulo instance name
       --lat                 name of the latitude field in the SimpleFeatureType if ingesting point     data
