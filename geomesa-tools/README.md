@@ -228,29 +228,55 @@ To list the features on a specified catalog table, use the `list` command.
     geomesa list -u username -p password -c test_catalog
     
 ### tableconf
-To list, describe, and update the configuration parameters on a specified table, use the `tableconf` command.  
-### Subcommands
-#### list
-List all table configuration parameters
-##### Required flags: 
-Specify the catalog table to use with `-c` or `--catalog`.
-Specify the feature name with `-f` or `--feature-name`.
-Specify the table suffix (attr_idx, st_idx, or records) with `-s` or `--suffix`. 
-#### describe
-Describe a single table configuration parameter.
-##### Required flags: 
-Specify the catalog table to use with `-c` or `--catalog`.
-Specify the feature name with `-f` or `--feature-name`.
-Specify the table configuration parameter with `--param`.
-Specify the table suffix (attr_idx, st_idx, or records) with `-s` or `--suffix`.
-#### update
-Update a single table configuration parameter to a new value.
-##### Required flags: 
-Specify the catalog table to use with `-c` or `--catalog`.
-Specify the feature name with `-f` or `--feature-name`.
-Specify the table configuration parameter with `--param`.
-Specify the new value for the configuration parameter with `-n` or `--new-value`.
-Specify the table suffix (attr_idx, st_idx, or records) with `-s` or `--suffix`.
+To list, describe, and update the configuration parameters on a specified table, use the `tableconf` command. 
+
+####Usage
+
+    list      List the configuration parameters for a geomesa table
+        Usage: list [options]
+        Options:
+        -a, --auths             Accumulo authorizations
+        * -c, --catalog         Catalog table name for GeoMesa
+        * -f, --feature-name    Simple Feature Type name on which to operate
+        -i, --instance          Accumulo instance name        
+        --mock                  Run everything with a mock accumulo instance instead of a real one Default: false
+        * -p, --password        Accumulo password
+        * --suffix, -s          Table suffix to operate on (attr_idx, st_idx, or records)
+        * -u, --user            Accumulo user name
+        -v, --visibilities      Accumulo scan visibilities
+        -z, --zookeepers        Zookeepers (host:port, comma separated)
+    
+    describe      Describe a given configuration parameter for a table
+        Usage: describe [options]
+        Options:
+        -a, --auths             Accumulo authorizations
+        * -c, --catalog         Catalog table name for GeoMesa
+        * -f, --feature-name    Simple Feature Type name on which to operate
+        -i, --instance          Accumulo instance name        
+        --mock                  Run everything with a mock accumulo instance instead of a real one Default: false
+        *     --param           Accumulo table configuration param name (e.g. table.bloom.enabled)
+        * -p, --password        Accumulo password
+        * --suffix, -s          Table suffix to operate on (attr_idx, st_idx, or records)
+        * -u, --user            Accumulo user name
+        -v, --visibilities      Accumulo scan visibilities
+        -z, --zookeepers        Zookeepers (host:port, comma separated)
+    
+    update      Update a given table configuration parameter
+        Usage: update [options]
+        Options:
+        -a, --auths             Accumulo authorizations
+        * -c, --catalog         Catalog table name for GeoMesa
+        * -f, --feature-name    Simple Feature Type name on which to operate
+        -i, --instance          Accumulo instance name        
+        --mock                  Run everything with a mock accumulo instance instead of a real one Default: false
+        * --new-value, -n       New value of the property)
+        *     --param           Accumulo table configuration param name (e.g. table.bloom.enabled)
+        * -p, --password        Accumulo password
+        * --suffix, -s          Table suffix to operate on (attr_idx, st_idx, or records)
+        * -u, --user            Accumulo user name
+        -v, --visibilities      Accumulo scan visibilities
+        -z, --zookeepers        Zookeepers (host:port, comma separated)
+
 
 #### Example commands:
     geomesa tableconf list -u username -p password -c test_catalog -f test_feature -s st_idx
