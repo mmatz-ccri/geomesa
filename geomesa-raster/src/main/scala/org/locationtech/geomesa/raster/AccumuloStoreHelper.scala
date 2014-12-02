@@ -45,6 +45,16 @@ object AccumuloStoreHelper {
     else new ZooKeeperInstance(instance, zookeepers).getConnector(user, authToken)
   }
 
+  def buildAccumuloConnector(user: String,
+                             password: String,
+                             instance: String,
+                             zookeepers: String,
+                             useMock: Boolean = false): Connector = {
+    val authToken = new PasswordToken(password.getBytes)
+    if(useMock) new MockInstance(instance).getConnector(user, authToken)
+    else new ZooKeeperInstance(instance, zookeepers).getConnector(user, authToken)
+  }
+
   def getAuthorizations(params: JMap[String,Serializable], connector: Connector): List[String] = {
     // convert the connector authorizations into a string array - this is the maximum auths this connector can support
     val securityOps = connector.securityOperations
@@ -67,8 +77,11 @@ object AccumuloStoreHelper {
   }
 
   def getAuthorizationsProvider(params: JMap[String,Serializable], connector: Connector): AuthorizationsProvider = {
-    val auths = getAuthorizations(params, connector)
+    val auths: List[String] = getAuthorizations(params, connector)
+    getAuthorizationsProvider(auths, connector)
+  }
 
+  def getAuthorizationsProvider(auths: Seq[String], connector: Connector): AuthorizationsProvider = {
     // if the user specifies an auth provider to use, try to use that impl
     val authProviderSystemProperty = Option(System.getProperty(AuthorizationsProvider.AUTH_PROVIDER_SYS_PROPERTY))
 
@@ -104,7 +117,8 @@ object AccumuloStoreHelper {
 
     // update the authorizations in the parameters and then configure the auth provider
     // we copy the map so as not to modify the original
-    val modifiedParams = params ++ Map(authsParam.key -> auths.mkString(","))
+    val modifiedParams = Map(authsParam.key -> auths.mkString(","))
+    // JNH: Is this going to work?  Ask Emilio.
     authorizationsProvider.configure(modifiedParams)
     authorizationsProvider
   }

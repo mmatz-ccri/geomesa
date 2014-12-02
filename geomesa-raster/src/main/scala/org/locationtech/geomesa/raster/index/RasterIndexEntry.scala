@@ -20,6 +20,7 @@ import java.nio.ByteBuffer
 
 import com.vividsolutions.jts.geom.Geometry
 import org.apache.accumulo.core.data.Key
+import org.apache.hadoop.io.Text
 import org.geotools.feature.simple.SimpleFeatureBuilder
 import org.joda.time.DateTime
 import org.locationtech.geomesa.core.index._
@@ -43,7 +44,7 @@ object RasterIndexEntry extends IndexHelpers {
                       ByteBuffer.allocate(4).putInt(encodedGeom.length).array() ++
                       encodedGeom ++
                       encodedDtg
-    cqByteArray
+    new Text(cqByteArray)
   }
 
   def decodeIndexCQMetadata(k: Key): DecodedIndex = {

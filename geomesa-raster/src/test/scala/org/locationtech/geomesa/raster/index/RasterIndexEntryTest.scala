@@ -45,7 +45,7 @@ class RasterIndexEntryTest extends Specification {
       val cqMetaData = RasterIndexEntry.encodeIndexCQMetadata(id, geom, Some(dt))
 
       // convert CQ Array[Byte] to Key (a key with everything as a null except CQ)
-      val keyWithCq = makeKey(cqMetaData)
+      val keyWithCq = makeKey(cqMetaData.getBytes)
 
       // decode metadata from key
       val decoded = RasterIndexEntry.decodeIndexCQMetadata(keyWithCq)
@@ -67,7 +67,7 @@ class RasterIndexEntryTest extends Specification {
       val cqMetaData = RasterIndexEntry.encodeIndexCQMetadata(id, geom, dt)
 
       // convert CQ Array[Byte] to Key (a key with everything as a null except CQ)
-      val keyWithCq = makeKey(cqMetaData)
+      val keyWithCq = makeKey(cqMetaData.getBytes)
 
       // decode metadata from key
       val decoded = RasterIndexEntry.decodeIndexCQMetadata(keyWithCq)

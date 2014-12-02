@@ -67,6 +67,8 @@ class GeoMesaCoverageReader(val url: String, hints: Hints) extends AbstractGridC
   this.originalGridRange = new GridEnvelope2D(new Rectangle(0, 0, 1024, 512))
   this.coverageFactory = CoverageFactoryFinder.getGridCoverageFactory(this.hints)
 
+
+
   val zkInstance = new ZooKeeperInstance(instanceId, zookeepers)
   val connector = zkInstance.getConnector(user, new PasswordToken(password.getBytes))
 
@@ -95,6 +97,8 @@ class GeoMesaCoverageReader(val url: String, hints: Hints) extends AbstractGridC
   def getGeohashPrecision = resolutionStr.toInt
 
   def read(parameters: Array[GeneralParameterValue]): GridCoverage2D = {
+    // Read and understand Params
+
     val paramsMap = parameters.map(gpv => (gpv.getDescriptor.getName.getCode, gpv)).toMap
     val gridGeometry = paramsMap(AbstractGridFormat.READ_GRIDGEOMETRY2D.getName.toString).asInstanceOf[Parameter[GridGeometry2D]].getValue
     val env = gridGeometry.getEnvelope
@@ -104,9 +108,13 @@ class GeoMesaCoverageReader(val url: String, hints: Hints) extends AbstractGridC
     
     //val chunks = getChunks(geohash, getGeohashPrecision, None, bbox)
 
+    // Query ACO for Iterator[Chunk]
+
     val aco: AccumuloCoverageOperations = ??? //new AccumuloCoverageOperations
 
     val chunks: Iterator[GeoMesaChunk] = aco.getRasters()
+
+    // Mosaic Chunks
 
     val image = mosaicGridCoverages(chunks, env = env)
     this.coverageFactory.create(coverageName, image, env)
@@ -137,55 +145,55 @@ class GeoMesaCoverageReader(val url: String, hints: Hints) extends AbstractGridC
     }
   }
 
-  def getCoverages(env: Envelope, gridGeometry: GridGeometry2D): Iterator[GridCoverage2D] = {
-    val xDim = gridGeometry.getGridRange2D.getSpan(0)
-    val yDim = gridGeometry.getGridRange2D.getSpan(1)
-    val min = Array(Math.max(env.getMinimum(0), -180) + .00000001, Math.max(env.getMinimum(1), -90) + .00000001)
-    val max = Array(Math.min(env.getMaximum(0), 180) - .00000001, Math.min(env.getMaximum(1), 90) - .00000001)
-    val bbox = BoundingBox(Bounds(min(0), max(0)), Bounds(min(1), max(1)))
-    val ghBbox = TwoGeoHashBoundingBox(bbox, getGeohashPrecision)
-    val rescaleX = ghBbox.ur.bbox.longitudeSize - 1
-    val rescaleY = ghBbox.ur.bbox.latitudeSize - 1
-    val xdim = math.max(1, math.min(xDim, math.round(ghBbox.bbox.longitudeSize / rescaleX).toInt))
-    val ydim = math.max(1, math.min(yDim, math.round(ghBbox.bbox.latitudeSize / rescaleY).toInt))
-
-    val scanBuffers = getScanBuffers(bbox, xdim, ydim)
-    val bufferList: List[Array[Byte]] = scanBuffers.map(_.getValue.get()).toList
-    val geomList: List[Geometry] = scanBuffers.map(e => RasterIndexEntry.decodeIndexCQMetadata(e.getKey).geom).toList
-    val coverageList = new ListBuffer[GridCoverage2D]()
-    bufferList.zipWithIndex.foreach({ case (raster, idx) =>
-      val dbuffer = new DataBufferByte(raster, xdim * ydim)
-      val sampleModel = new BandedSampleModel(DataBuffer.TYPE_BYTE,
-        xdim,
-        ydim,
-        1)
-      val tile = Raster.createWritableRaster(sampleModel, dbuffer, new Point(0, 0))
-      val envelope = new ReferencedEnvelope(geomList.get(idx).getEnvelopeInternal, CRS.decode("EPSG:4326"))
-      coverageList += this.coverageFactory.create(coverageName, tile, envelope)
-    })
-    coverageList.toIterator
-  }
-
-  def getScanBuffers(bbox: BoundingBox, xDim: Int, yDim: Int) = {
-    val scanner = connector.createBatchScanner(table, auths, 10)
-    scanner.fetchColumn(new Text(""), new Text(s"$rasterName~$timeStampString"))
-
-    val ranges = BoundingBoxUtil.getRangesByRow(BoundingBox.getGeoHashesFromBoundingBox(bbox))
-    scanner.setRanges(ranges)
-
-    AggregatingKeyIterator.setupAggregatingKeyIterator(scanner,
-      1000,
-      classOf[SurfaceAggregatingIterator],
-      Map[String, String](
-        s"${aggPrefix}bottomLeft" -> GeoHash(bbox.ll, getGeohashPrecision).hash,
-        s"${aggPrefix}topRight" -> GeoHash(bbox.ur, getGeohashPrecision).hash,
-        s"${aggPrefix}precision" -> getGeohashPrecision.toString,
-        s"${aggPrefix}dims" -> s"$xDim,$yDim"
-      )
-    )
-
-    SelfClosingBatchScanner(scanner)
-  }
+//  def getCoverages(env: Envelope, gridGeometry: GridGeometry2D): Iterator[GridCoverage2D] = {
+//    val xDim = gridGeometry.getGridRange2D.getSpan(0)
+//    val yDim = gridGeometry.getGridRange2D.getSpan(1)
+//    val min = Array(Math.max(env.getMinimum(0), -180) + .00000001, Math.max(env.getMinimum(1), -90) + .00000001)
+//    val max = Array(Math.min(env.getMaximum(0), 180) - .00000001, Math.min(env.getMaximum(1), 90) - .00000001)
+//    val bbox = BoundingBox(Bounds(min(0), max(0)), Bounds(min(1), max(1)))
+//    val ghBbox = TwoGeoHashBoundingBox(bbox, getGeohashPrecision)
+//    val rescaleX = ghBbox.ur.bbox.longitudeSize - 1
+//    val rescaleY = ghBbox.ur.bbox.latitudeSize - 1
+//    val xdim = math.max(1, math.min(xDim, math.round(ghBbox.bbox.longitudeSize / rescaleX).toInt))
+//    val ydim = math.max(1, math.min(yDim, math.round(ghBbox.bbox.latitudeSize / rescaleY).toInt))
+//
+//    val scanBuffers = getScanBuffers(bbox, xdim, ydim)
+//    val bufferList: List[Array[Byte]] = scanBuffers.map(_.getValue.get()).toList
+//    val geomList: List[Geometry] = scanBuffers.map(e => RasterIndexEntry.decodeIndexCQMetadata(e.getKey).geom).toList
+//    val coverageList = new ListBuffer[GridCoverage2D]()
+//    bufferList.zipWithIndex.foreach({ case (raster, idx) =>
+//      val dbuffer = new DataBufferByte(raster, xdim * ydim)
+//      val sampleModel = new BandedSampleModel(DataBuffer.TYPE_BYTE,
+//        xdim,
+//        ydim,
+//        1)
+//      val tile = Raster.createWritableRaster(sampleModel, dbuffer, new Point(0, 0))
+//      val envelope = new ReferencedEnvelope(geomList.get(idx).getEnvelopeInternal, CRS.decode("EPSG:4326"))
+//      coverageList += this.coverageFactory.create(coverageName, tile, envelope)
+//    })
+//    coverageList.toIterator
+//  }
+//
+//  def getScanBuffers(bbox: BoundingBox, xDim: Int, yDim: Int) = {
+//    val scanner = connector.createBatchScanner(table, auths, 10)
+//    scanner.fetchColumn(new Text(""), new Text(s"$rasterName~$timeStampString"))
+//
+//    val ranges = BoundingBoxUtil.getRangesByRow(BoundingBox.getGeoHashesFromBoundingBox(bbox))
+//    scanner.setRanges(ranges)
+//
+//    AggregatingKeyIterator.setupAggregatingKeyIterator(scanner,
+//      1000,
+//      classOf[SurfaceAggregatingIterator],
+//      Map[String, String](
+//        s"${aggPrefix}bottomLeft" -> GeoHash(bbox.ll, getGeohashPrecision).hash,
+//        s"${aggPrefix}topRight" -> GeoHash(bbox.ur, getGeohashPrecision).hash,
+//        s"${aggPrefix}precision" -> getGeohashPrecision.toString,
+//        s"${aggPrefix}dims" -> s"$xDim,$yDim"
+//      )
+//    )
+//
+//    SelfClosingBatchScanner(scanner)
+//  }
 
   def mosaicGridCoverages(coverageList: Iterator[GeoMesaChunk], width: Int = 256, height: Int = 256, env: Envelope, startImage: BufferedImage = null) = {
     val image = if (startImage == null) { getEmptyImage(width, height) } else { startImage }

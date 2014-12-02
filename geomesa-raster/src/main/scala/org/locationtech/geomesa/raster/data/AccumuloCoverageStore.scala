@@ -22,7 +22,10 @@ import org.apache.accumulo.core.client._
 import org.geotools.coverage.grid.GridCoverage2D
 import org.geotools.factory.Hints
 import org.locationtech.geomesa.core.security.AuthorizationsProvider
+import org.locationtech.geomesa.core.stats.StatWriter
+import org.locationtech.geomesa.raster.AccumuloStoreHelper
 import org.locationtech.geomesa.raster.ingest.RasterMetadata
+
 
 /**
  * @param connector Accumulo connector
@@ -55,13 +58,13 @@ class AccumuloCoverageStore(val connector: Connector,
 
   val coverageOps: AccumuloCoverageOperations =
     new AccumuloCoverageOperations(connector,
-                                   coverageTable,
-                                   writeVisibilities,
-                                   authorizationsProvider,
-                                   shards,
-                                   bwConfig,
-                                   writeMemory,
-                                   writeThreads)
+      coverageTable,
+      writeVisibilities,
+      authorizationsProvider,
+      shards,
+      bwConfig,
+      writeMemory,
+      writeThreads)
 
   Hints.putSystemDefault(Hints.FORCE_LONGITUDE_FIRST_AXIS_ORDER, true)
 
@@ -73,6 +76,23 @@ class AccumuloCoverageStore(val connector: Connector,
 }
 
 object AccumuloCoverageStore {
+  def apply(username: String,
+            password: String,
+            instanceId: String,
+            zookeepers: String,
+            tableName: String,
+            auths: String,
+            writeVisibilities: String): AccumuloCoverageStore = {
+
+    val conn = AccumuloStoreHelper.buildAccumuloConnector(username, password, instanceId, zookeepers)
+    val authorizationsProvider = AccumuloStoreHelper.getAuthorizationsProvider(auths.split(","), conn)
+
+    // NB: JNH: Skipping the shards/writeMemory/writeThreads/queryThreadsParams
+    new AccumuloCoverageStore(conn,
+      tableName,
+      authorizationsProvider,
+      writeVisibilities) with StatWriter
+  }
 }
 
 object CoverageTableConfig {

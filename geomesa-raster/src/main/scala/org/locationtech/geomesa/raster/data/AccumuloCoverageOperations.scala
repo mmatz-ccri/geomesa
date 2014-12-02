@@ -18,22 +18,27 @@
 package org.locationtech.geomesa.raster.data
 
 import java.awt.image.RenderedImage
+import java.io.{ByteArrayInputStream, ObjectInputStream}
 import java.util
+import java.util.Date
 import java.util.Map.Entry
 
+import com.vividsolutions.jts.geom.Polygon
 import org.apache.accumulo.core.client.{BatchWriterConfig, Connector, TableExistsException}
 import org.apache.accumulo.core.data.{Key, Mutation, Value}
+import org.apache.accumulo.core.data.{Range => ARange}
 import org.apache.accumulo.core.security.{Authorizations, ColumnVisibility, TablePermission}
 import org.apache.hadoop.io.Text
 import org.geotools.coverage.grid.GridCoverage2D
+import org.geotools.util.DateRange
 import org.joda.time.DateTime
 import org.locationtech.geomesa.core.security.AuthorizationsProvider
-import org.locationtech.geomesa.plugin.ImageUtils._
 import org.locationtech.geomesa.raster.feature.GeoMesaChunk
 import org.locationtech.geomesa.raster.index.RasterIndexEntry
 import org.locationtech.geomesa.raster.ingest.RasterMetadata
 import org.locationtech.geomesa.raster.util.RasterUtils
-import org.locationtech.geomesa.utils.geohash.GeoHash
+import org.locationtech.geomesa.utils.geohash.{BoundingBox, GeoHash}
+import org.opengis.coverage.grid.GridCoverage
 
 import scala.collection.JavaConversions._
 
@@ -74,7 +79,7 @@ class AccumuloCoverageOperations(connector: Connector,
   def createMutation(raster: GridCoverage2D, rm: RasterMetadata, visibilities: String): Mutation = {
     val mutation = new Mutation(getRow(rm.mbgh))
     val colFam = getCF(rm)
-    val colQual = getCQ(rm)
+    val colQual = RasterIndexEntry.encodeIndexCQMetadata(rm.id, rm.envelope.asInstanceOf[Polygon], Some(rm.time))
     val timestamp: Long = dateToAccTimestamp(rm.time)
     val colVis = new ColumnVisibility(visibilities)
     val value = encodeValue(raster)
@@ -112,20 +117,36 @@ class AccumuloCoverageOperations(connector: Connector,
     }
   }
 
+  def getChunks(geohash: String,
+                iRes: Int,
+                bbox: BoundingBox,
+                timeParam: Option[Either[Date, DateRange]]): Iterator[GridCoverage] = ???
+
+
   def getRasters(): Iterator[GeoMesaChunk] = {
-    val scanner = connector.createScanner(coverageTable, new Authorizations())
+    val scanner = connector.createScanner(coverageTable, authorizationsProvider.getAuthorizations)
+    scanner.setRange(new ARange())
 
     val iter: util.Iterator[Entry[Key, Value]] = scanner.iterator()
 
     iter.map { entry =>
-
-      val key = entry.getKey
-
       val chunk: RenderedImage = rasterImageDeserialize(entry.getValue.get)
       val metadata: RasterIndexEntry.DecodedIndex = RasterIndexEntry.decodeIndexCQMetadata(entry.getKey)
 
       GeoMesaChunk(chunk, metadata)
     }
+  }
+
+  // MOVE THIS!!! JNH
+  def rasterImageDeserialize(imageBytes: Array[Byte]): RenderedImage = {
+    val in: ObjectInputStream = new ObjectInputStream(new ByteArrayInputStream(imageBytes))
+    var read: RenderedImage = null
+    try {
+      read = in.readObject().asInstanceOf[RenderedImage]
+    } finally {
+      in.close
+    }
+    read
   }
 }
 

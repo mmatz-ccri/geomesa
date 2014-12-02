@@ -21,6 +21,7 @@ import java.awt.image.RenderedImage
 import org.geotools.coverage.grid.GridCoverage2D
 import org.geotools.geometry.Envelope2D
 import org.geotools.geometry.jts.ReferencedEnvelope
+import org.geotools.referencing.CRS
 import org.joda.time.DateTime
 import org.locationtech.geomesa.raster.index.RasterIndexEntry
 import org.locationtech.geomesa.raster.util.RasterUtils.renderedImageToGridCoverage2d
@@ -29,7 +30,10 @@ import org.opengis.filter.identity.FeatureId
 import org.opengis.geometry.{BoundingBox, Envelope}
 
 case class GeoMesaChunk(chunk: RenderedImage,
-                        metadata: RasterIndexEntry.DecodedIndex)
+                        metadata: RasterIndexEntry.DecodedIndex) {
+
+  val envelope = new ReferencedEnvelope(metadata.geom.getEnvelopeInternal, CRS.decode("EPSG:4326"))
+}
 
 //class GeomesaRaster(id: FeatureId) extends Serializable {
 //
