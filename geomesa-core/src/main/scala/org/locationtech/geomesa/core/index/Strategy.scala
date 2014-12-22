@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2014 Commonwealth Computer Research, Inc.
+ * Copyright 2014-2014 Commonwealth Computer Research, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import com.vividsolutions.jts.geom.{Geometry, Polygon}
 import org.apache.accumulo.core.client.{BatchScanner, IteratorSetting}
 import org.apache.accumulo.core.data.{Key, Value}
 import org.geotools.data.Query
+import org.geotools.filter.text.ecql.ECQL
+import org.joda.time.Interval
 import org.locationtech.geomesa.core._
 import org.locationtech.geomesa.core.data.FeatureEncoding.FeatureEncoding
 import org.locationtech.geomesa.core.data._
@@ -31,6 +33,7 @@ import org.locationtech.geomesa.core.iterators.{FEATURE_ENCODING, _}
 import org.locationtech.geomesa.core.util.SelfClosingIterator
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.opengis.feature.simple.SimpleFeatureType
+import org.opengis.filter.Filter
 
 import scala.collection.JavaConversions._
 import scala.util.Random
@@ -50,6 +53,10 @@ trait Strategy {
 
   def configureFeatureEncoding(cfg: IteratorSetting, featureEncoding: FeatureEncoding) {
     cfg.addOption(FEATURE_ENCODING, featureEncoding.toString)
+  }
+
+  def configureFilter(cfg: IteratorSetting, filter: Option[Filter]) {
+    filter.foreach { f => cfg.addOption(DEFAULT_FILTER_PROPERTY_NAME, ECQL.toCQL(f)) }
   }
 
   def configureFeatureType(cfg: IteratorSetting, featureType: SimpleFeatureType) {
@@ -93,7 +100,6 @@ trait Strategy {
       "sffilter-" + randomPrintableString(5),
       classOf[SimpleFeatureFilteringIterator])
 
-    cfg.addOption(DEFAULT_SCHEMA_NAME, schema)
     configureFeatureEncoding(cfg, featureEncoding)
     configureTransforms(query,cfg)
     configureFeatureType(cfg, simpleFeatureType)
@@ -135,6 +141,23 @@ trait Strategy {
       DensityIterator.configure(cfg, polygon, width, height)
 
       cfg.addOption(DEFAULT_SCHEMA_NAME, schema)
+      configureFeatureEncoding(cfg, featureEncoding)
+      configureFeatureType(cfg, featureType)
+
+      Some(cfg)
+    }
+    else if (query.getHints.containsKey(TEMPORAL_DENSITY_KEY)){
+      val clazz = classOf[TemporalDensityIterator]
+
+      val cfg = new IteratorSetting(iteratorPriority_AnalysisIterator,
+        "topfilter-" + randomPrintableString(5),
+        clazz)
+
+      val interval = query.getHints.get(TIME_INTERVAL_KEY).asInstanceOf[Interval]
+      val buckets = query.getHints.get(TIME_BUCKETS_KEY).asInstanceOf[Int]
+
+      TemporalDensityIterator.configure(cfg, interval, buckets)
+
       configureFeatureEncoding(cfg, featureEncoding)
       configureFeatureType(cfg, featureType)
 

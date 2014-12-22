@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2014 Commonwealth Computer Research, Inc.
+ * Copyright 2014-2014 Commonwealth Computer Research, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,16 +23,20 @@ import org.apache.accumulo.core.data.{Key, Value}
 import org.geotools.data.{DataUtilities, Query}
 import org.geotools.factory.CommonFactoryFinder
 import org.geotools.geometry.jts.ReferencedEnvelope
-import org.joda.time.Interval
 import org.locationtech.geomesa.core.data.FeatureEncoding.FeatureEncoding
 import org.locationtech.geomesa.core.data._
 import org.locationtech.geomesa.core.filter._
 import org.locationtech.geomesa.core.index.QueryHints._
-import org.locationtech.geomesa.core.iterators.{DeDuplicatingIterator, DensityIterator}
+import org.locationtech.geomesa.core.iterators.TemporalDensityIterator._
+import org.locationtech.geomesa.core.iterators.{DeDuplicatingIterator, DensityIterator, TemporalDensityIterator}
 import org.locationtech.geomesa.core.util.CloseableIterator._
 import org.locationtech.geomesa.core.util.{CloseableIterator, SelfClosingIterator}
+import org.locationtech.geomesa.feature.AvroSimpleFeatureFactory
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
+import org.opengis.filter.sort.{SortBy, SortOrder}
+
+import scala.reflect.ClassTag
 
 object QueryPlanner {
   val iteratorPriority_RowRegex                        = 0
@@ -43,39 +47,13 @@ object QueryPlanner {
   val iteratorPriority_SpatioTemporalIterator          = 200
   val iteratorPriority_SimpleFeatureFilteringIterator  = 300
   val iteratorPriority_AnalysisIterator                = 400
+
+  val zeroPoint = new GeometryFactory().createPoint(new Coordinate(0,0))
 }
 
 case class QueryPlanner(schema: String,
                         featureType: SimpleFeatureType,
-                        featureEncoding: FeatureEncoding) extends ExplainingLogging {
-  def buildFilter(geom: Geometry, interval: Interval): KeyPlanningFilter =
-    (IndexSchema.somewhere(geom), IndexSchema.somewhen(interval)) match {
-      case (None, None)       =>    AcceptEverythingFilter
-      case (None, Some(i))    =>
-        if (i.getStart == i.getEnd) DateFilter(i.getStart)
-        else                        DateRangeFilter(i.getStart, i.getEnd)
-      case (Some(p), None)    =>    SpatialFilter(p)
-      case (Some(p), Some(i)) =>
-        if (i.getStart == i.getEnd) SpatialDateFilter(p, i.getStart)
-        else                        SpatialDateRangeFilter(p, i.getStart, i.getEnd)
-    }
-
-  def netPolygon(poly: Polygon): Polygon = poly match {
-    case null => null
-    case p if p.covers(IndexSchema.everywhere) =>
-      IndexSchema.everywhere
-    case p if IndexSchema.everywhere.covers(p) => p
-    case _ => poly.intersection(IndexSchema.everywhere).
-      asInstanceOf[Polygon]
-  }
-
-  def netGeom(geom: Geometry): Geometry =
-    Option(geom).map(_.intersection(IndexSchema.everywhere)).orNull
-
-  def netInterval(interval: Interval): Interval = interval match {
-    case null => null
-    case _    => IndexSchema.everywhen.overlap(interval)
-  }
+                        featureEncoding: FeatureEncoding) extends ExplainingLogging with IndexFilterHelpers {
 
   // As a pre-processing step, we examine the query/filter and split it into multiple queries.
   // TODO: Work to make the queries non-overlapping.
@@ -150,7 +128,7 @@ case class QueryPlanner(schema: String,
   private def configureScanners(acc: AccumuloConnectorCreator,
                        sft: SimpleFeatureType,
                        derivedQuery: Query,
-                       isDensity: Boolean,
+                       isADensity: Boolean,
                        output: ExplainerOutputType): SelfClosingIterator[Entry[Key, Value]] = {
     output(s"Transforms: ${derivedQuery.getHints.get(TRANSFORMS)}")
     val strategy = QueryStrategyDecider.chooseStrategy(acc.catalogTableFormat(sft), sft, derivedQuery)
@@ -176,22 +154,65 @@ case class QueryPlanner(schema: String,
     // Decode according to the SFT return type.
     // if this is a density query, expand the map
     if (query.getHints.containsKey(DENSITY_KEY)) {
-      accumuloIterator.flatMap { kv: Entry[Key, Value] =>
+      accumuloIterator.flatMap { kv =>
         DensityIterator.expandFeature(decoder.decode(kv.getValue))
       }
+    } else if (query.getHints.containsKey(TEMPORAL_DENSITY_KEY)) {
+      val timeSeriesStrings = accumuloIterator.map { kv =>
+        decoder.decode(kv.getValue).getAttribute(ENCODED_TIME_SERIES).toString
+      }
+
+      val summedTimeSeries = timeSeriesStrings.map(decodeTimeSeries).reduce(combineTimeSeries)
+
+      val featureBuilder = AvroSimpleFeatureFactory.featureBuilder(returnSFT)
+      featureBuilder.reset()
+      featureBuilder.add(TemporalDensityIterator.encodeTimeSeries(summedTimeSeries))
+
+      featureBuilder.add(QueryPlanner.zeroPoint) //Filler value as Feature requires a geometry
+      val result = featureBuilder.buildFeature(null)
+
+      List(result).iterator
     } else {
-      accumuloIterator.map { kv => decoder.decode(kv.getValue) }
+      val features = accumuloIterator.map { kv => decoder.decode(kv.getValue) }
+      if(query.getSortBy != null && query.getSortBy.length > 0) sort(features, query.getSortBy)
+      else features
     }
   }
+
+  private def sort(features: CloseableIterator[SimpleFeature],
+                   sortBy: Array[SortBy]): CloseableIterator[SimpleFeature] = {
+    val sortOrdering = sortBy.map {
+      case SortBy.NATURAL_ORDER => Ordering.by[SimpleFeature, String](_.getID)
+      case SortBy.REVERSE_ORDER => Ordering.by[SimpleFeature, String](_.getID).reverse
+      case sb                   =>
+        val prop = sb.getPropertyName.getPropertyName
+        val ord  = attributeToComparable(prop)
+        if(sb.getSortOrder == SortOrder.DESCENDING) ord.reverse
+        else ord
+    }
+    val comp: (SimpleFeature, SimpleFeature) => Boolean =
+      if(sortOrdering.length == 1) {
+        // optimized case for one ordering
+        val ret = sortOrdering.head
+        (l, r) => ret.compare(l, r) < 0
+      }  else {
+        (l, r) => sortOrdering.map(_.compare(l, r)).find(_ != 0).getOrElse(0) < 0
+      }
+    CloseableIterator(features.toList.sortWith(comp).iterator)
+  }
+
+  def attributeToComparable[T <: Comparable[T]](prop: String)(implicit ct: ClassTag[T]): Ordering[SimpleFeature] =
+      Ordering.by[SimpleFeature, T](_.getAttribute(prop).asInstanceOf[T])
 
   // This function calculates the SimpleFeatureType of the returned SFs.
   private def getReturnSFT(query: Query): SimpleFeatureType =
     query match {
       case _: Query if query.getHints.containsKey(DENSITY_KEY)  =>
         SimpleFeatureTypes.createType(featureType.getTypeName, DensityIterator.DENSITY_FEATURE_STRING)
+      case _: Query if query.getHints.containsKey(TEMPORAL_DENSITY_KEY)  =>
+        SimpleFeatureTypes.createType(featureType.getTypeName, TemporalDensityIterator.TEMPORAL_DENSITY_FEATURE_STRING)
       case _: Query if query.getHints.get(TRANSFORM_SCHEMA) != null =>
         query.getHints.get(TRANSFORM_SCHEMA).asInstanceOf[SimpleFeatureType]
       case _ => featureType
     }
 }
-

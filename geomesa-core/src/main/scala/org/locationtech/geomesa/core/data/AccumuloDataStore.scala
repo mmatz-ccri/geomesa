@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Commonwealth Computer Research, Inc.
+ * Copyright 2014 Commonwealth Computer Research, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,12 @@
 
 package org.locationtech.geomesa.core.data
 
-import java.util.{Map => JMap}
+import java.util.{Map => JMap, Date}
 
 import com.google.common.collect.ImmutableSortedSet
 import com.typesafe.scalalogging.slf4j.Logging
 import org.apache.accumulo.core.client._
 import org.apache.accumulo.core.client.admin.TimeType
-import org.apache.accumulo.core.client.mock.MockConnector
 import org.apache.accumulo.core.client.security.tokens.AuthenticationToken
 import org.apache.accumulo.core.data.{Key, Value}
 import org.apache.accumulo.core.file.keyfunctor.{ColumnFamilyFunctor, RowFunctor}
@@ -32,8 +31,11 @@ import org.apache.hadoop.io.Text
 import org.geotools.data._
 import org.geotools.data.simple.SimpleFeatureSource
 import org.geotools.factory.Hints
+import org.geotools.feature.NameImpl
 import org.geotools.geometry.jts.ReferencedEnvelope
 import org.geotools.process.vector.TransformProcess
+import org.geotools.referencing.crs.DefaultGeographicCRS
+import org.joda.time.{DateTime, Interval}
 import org.locationtech.geomesa.core
 import org.locationtech.geomesa.core.data.AccumuloDataStore._
 import org.locationtech.geomesa.core.data.FeatureEncoding.FeatureEncoding
@@ -41,8 +43,11 @@ import org.locationtech.geomesa.core.data.tables.{AttributeTable, RecordTable, S
 import org.locationtech.geomesa.core.index
 import org.locationtech.geomesa.core.index._
 import org.locationtech.geomesa.core.security.AuthorizationsProvider
+import org.locationtech.geomesa.data.TableSplitter
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
-import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes.{AttributeSpec, NonGeomAttributeSpec}
+import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes.{FeatureSpec, NonGeomAttributeSpec}
+import org.locationtech.geomesa.utils.time.Time._
+import org.opengis.feature.`type`.{AttributeDescriptor, Name}
 import org.opengis.feature.simple.SimpleFeatureType
 import org.opengis.filter.Filter
 import org.opengis.referencing.crs.CoordinateReferenceSystem
@@ -182,8 +187,8 @@ class AccumuloDataStore(val connector: Connector,
    * @param attributes
    */
   def updateIndexedAttributes(featureName: String, attributes: String): Unit = {
-    val existing = AttributeSpec.toAttributes(getAttributes(featureName))
-    val updated = AttributeSpec.toAttributes(attributes)
+    val FeatureSpec(existing, _) = SimpleFeatureTypes.parse(getAttributes(featureName).getOrElse(""))
+    val FeatureSpec(updated, _)  = SimpleFeatureTypes.parse(attributes)
     // check that the only changes are to non-geometry index flags
     val ok = existing.length == updated.length &&
       existing.zip(updated).forall { case (e, u) => e == u ||
@@ -304,11 +309,9 @@ class AccumuloDataStore(val connector: Connector,
 
     List(spatioTemporalIdxTable, attributeIndexTable, recordTable).foreach(ensureTableExists)
 
-    if (!connector.isInstanceOf[MockConnector]) {
-      configureRecordTable(featureType, recordTable)
-      configureAttrIdxTable(featureType, attributeIndexTable)
-      configureSpatioTemporalIdxTable(maxShard, featureType, spatioTemporalIdxTable)
-    }
+    configureRecordTable(featureType, recordTable)
+    configureAttrIdxTable(featureType, attributeIndexTable)
+    configureSpatioTemporalIdxTable(maxShard, featureType, spatioTemporalIdxTable)
   }
 
   private def ensureTableExists(table: String) =
@@ -323,10 +326,13 @@ class AccumuloDataStore(val connector: Connector,
   def configureRecordTable(featureType: SimpleFeatureType, recordTable: String): Unit = {
     val prefix = index.getTableSharingPrefix(featureType)
     val prefixFn = RecordTable.getRowKey(prefix, _: String)
-    // if using UUID as FeatureID, configure splits with hex characters
-    val hexSplits = "0123456789abcdefABCDEF".map(_.toString).map(prefixFn).map(new Text(_))
-    val splits = ImmutableSortedSet.copyOf(hexSplits.toArray)
-    tableOps.addSplits(recordTable, splits)
+    val splitterClazz = featureType.getUserData.getOrElse(SimpleFeatureTypes.TABLE_SPLITTER, classOf[HexSplitter].getCanonicalName).asInstanceOf[String]
+    val clazz = Class.forName(splitterClazz)
+    val splitter = clazz.newInstance().asInstanceOf[TableSplitter]
+    val splitterOptions = featureType.getUserData.getOrElse(SimpleFeatureTypes.TABLE_SPLITTER_OPTIONS, Map.empty[String, String]).asInstanceOf[Map[String, String]]
+    val splits = splitter.getSplits(splitterOptions)
+    val sortedSplits = ImmutableSortedSet.copyOf(splits.map(_.toString).map(prefixFn).map(new Text(_)))
+    tableOps.addSplits(recordTable, sortedSplits)
     // enable the row functor as the feature ID is stored in the Row ID
     tableOps.setProperty(recordTable, "table.bloom.key.functor", classOf[RowFunctor].getCanonicalName)
     tableOps.setProperty(recordTable, "table.bloom.enabled", "true")
@@ -334,11 +340,11 @@ class AccumuloDataStore(val connector: Connector,
 
   // configure splits for each of the attribute names
   def configureAttrIdxTable(featureType: SimpleFeatureType, attributeIndexTable: String): Unit = {
-    val indexedAttrs = SimpleFeatureTypes.getIndexedAttributes(featureType)
+    val indexedAttrs = SimpleFeatureTypes.getSecondaryIndexedAttributes(featureType)
     if (!indexedAttrs.isEmpty) {
       val prefix = index.getTableSharingPrefix(featureType)
-      val prefixFn = AttributeTable.getAttributeIndexRowPrefix(prefix, _: String)
-      val names = indexedAttrs.map(_.getLocalName).map(prefixFn).map(new Text(_))
+      val prefixFn = AttributeTable.getAttributeIndexRowPrefix(prefix, _: AttributeDescriptor)
+      val names = indexedAttrs.map(prefixFn).map(new Text(_))
       val splits = ImmutableSortedSet.copyOf(names.toArray)
       tableOps.addSplits(attributeIndexTable, splits)
     }
@@ -602,11 +608,17 @@ class AccumuloDataStore(val connector: Connector,
 
   // NB:  By default, AbstractDataStore is "isWriteable".  This means that createFeatureSource returns
   // a featureStore
-  override def getFeatureSource(featureName: String): SimpleFeatureSource = {
-    validateMetadata(featureName)
-    if(!cachingConfig) new AccumuloFeatureStore(this, featureName)
-    else new AccumuloFeatureStore(this, featureName) with CachingFeatureSource
+  override def getFeatureSource(typeName: Name): SimpleFeatureSource = {
+    validateMetadata(typeName.getLocalPart)
+    if (cachingConfig) {
+      new AccumuloFeatureStore(this, typeName) with CachingFeatureSource
+    } else {
+      new AccumuloFeatureStore(this, typeName)
+    }
   }
+
+  override def getFeatureSource(typeName: String): SimpleFeatureSource =
+    getFeatureSource(new NameImpl(typeName))
 
   /**
    * Reads the index schema format out of the metadata
@@ -624,7 +636,7 @@ class AccumuloDataStore(val connector: Connector,
    * @return
    */
   private def getAttributes(featureName: String) =
-    metadata.read(featureName, ATTRIBUTES_KEY).getOrElse(EMPTY_STRING)
+    metadata.read(featureName, ATTRIBUTES_KEY)
 
   /**
    * Reads the feature encoding from the metadata. Defaults to TEXT if there is no metadata.
@@ -637,7 +649,7 @@ class AccumuloDataStore(val connector: Connector,
 
   // We assume that they want the bounds for everything.
   override def getBounds(query: Query): ReferencedEnvelope = {
-    val env = metadata.read(query.getTypeName, BOUNDS_KEY).getOrElse(WHOLE_WORLD_BOUNDS)
+    val env = metadata.read(query.getTypeName, SPATIAL_BOUNDS_KEY).getOrElse(WHOLE_WORLD_BOUNDS)
     val minMaxXY = env.split(":")
     val curBounds = minMaxXY.size match {
       case 4 => env
@@ -646,6 +658,19 @@ class AccumuloDataStore(val connector: Connector,
     val sft = getSchema(query.getTypeName)
     val crs = sft.getCoordinateReferenceSystem
     stringToReferencedEnvelope(curBounds, crs)
+  }
+
+  def getTimeBounds(typeName: String): Interval = {
+    metadata.read(typeName, TEMPORAL_BOUNDS_KEY)
+      .map(stringToTimeBounds)
+      .getOrElse(ALL_TIME_BOUNDS)
+  }
+
+  def stringToTimeBounds(value: String): Interval = {
+    val longs = value.split(":").map(java.lang.Long.parseLong)
+    require(longs(0) <= longs(1))
+    require(longs.length == 2)
+    new Interval(longs(0), longs(1))
   }
 
   private def stringToReferencedEnvelope(string: String,
@@ -657,30 +682,57 @@ class AccumuloDataStore(val connector: Connector,
   }
 
   /**
-   * Writes bounds for this feature
+   * Writes spatial bounds for this feature
    *
    * @param featureName
    * @param bounds
    */
-  def writeBounds(featureName: String, bounds: ReferencedEnvelope) {
+  def writeSpatialBounds(featureName: String, bounds: ReferencedEnvelope) {
     // prepare to write out properties to the Accumulo SHP-file table
-    val newbounds = metadata.read(featureName, BOUNDS_KEY) match {
-      case Some(env) => getNewBounds(env, featureName, bounds)
+    val newbounds = metadata.read(featureName, SPATIAL_BOUNDS_KEY) match {
+      case Some(env) => getNewBounds(env, bounds)
       case None      => bounds
     }
 
     val minMaxXY = List(newbounds.getMinX, newbounds.getMaxX, newbounds.getMinY, newbounds.getMaxY)
     val encoded = minMaxXY.mkString(":")
 
-    metadata.insert(featureName, BOUNDS_KEY, encoded)
+    metadata.insert(featureName, SPATIAL_BOUNDS_KEY, encoded)
   }
 
-  private def getNewBounds(env: String, featureName: String, bounds: ReferencedEnvelope) = {
-    val oldBounds = stringToReferencedEnvelope(env,
-                                                getSchema(featureName).getCoordinateReferenceSystem)
-    val projBounds = bounds.transform(oldBounds.getCoordinateReferenceSystem, true)
-    projBounds.expandToInclude(oldBounds)
-    projBounds
+  private def getNewBounds(env: String, bounds: ReferencedEnvelope) = {
+    val oldBounds = stringToReferencedEnvelope(env, DefaultGeographicCRS.WGS84)
+    oldBounds.expandToInclude(bounds)
+    oldBounds
+  }
+
+  /**
+   * Writes temporal bounds for this feature
+   *
+   * @param featureName
+   * @param timeBounds
+   */
+  def writeTemporalBounds(featureName: String, timeBounds: Interval) {
+    val newTimeBounds = metadata.read(featureName, TEMPORAL_BOUNDS_KEY) match {
+      case Some(currentTimeBoundsString) => getNewTimeBounds(currentTimeBoundsString, timeBounds)
+      case None                          => Some(timeBounds)
+    }
+
+    // Only write expanded bounds.
+    newTimeBounds.foreach { newBounds =>
+      val encoded = s"${newBounds.getStartMillis}:${newBounds.getEndMillis}"
+      metadata.insert(featureName, TEMPORAL_BOUNDS_KEY, encoded)
+    }
+  }
+
+  def getNewTimeBounds(current: String, newBounds: Interval): Option[Interval] = {
+    val currentTimeBounds = stringToTimeBounds(current)
+    val expandedTimeBounds = currentTimeBounds.expandByInterval(newBounds)
+    if (!currentTimeBounds.equals(expandedTimeBounds)) {
+      Some(expandedTimeBounds)
+    } else {
+      None
+    }
   }
 
   /**
@@ -690,24 +742,24 @@ class AccumuloDataStore(val connector: Connector,
    * @return the corresponding feature type (schema) for this feature name,
    *         or NULL if this feature name does not appear to exist
    */
-  override def getSchema(featureName: String): SimpleFeatureType =
-    getAttributes(featureName) match {
-      case attributes if attributes.isEmpty =>
-        null
-      case attributes                       =>
-        val sft = SimpleFeatureTypes.createType(featureName, attributes)
-        val dtgField = metadata.read(featureName, DTGFIELD_KEY)
-          .getOrElse(core.DEFAULT_DTG_PROPERTY_NAME)
-        val indexSchema = metadata.read(featureName, SCHEMA_KEY).orNull
-        // If no data is written, we default to 'false' in order to support old tables.
-        val sharingBoolean = metadata.read(featureName, SHARED_TABLES_KEY).getOrElse("false")
+  override def getSchema(featureName: String): SimpleFeatureType = getSchema(new NameImpl(featureName))
 
-        sft.getUserData.put(core.index.SF_PROPERTY_START_TIME, dtgField)
-        sft.getUserData.put(core.index.SF_PROPERTY_END_TIME, dtgField)
-        sft.getUserData.put(core.index.SFT_INDEX_SCHEMA, indexSchema)
-        core.index.setTableSharing(sft, new java.lang.Boolean(sharingBoolean))
-        sft
-    }
+  override def getSchema(name: Name): SimpleFeatureType = {
+    val featureName = name.getLocalPart
+    getAttributes(featureName).map { attributes =>
+      val sft = SimpleFeatureTypes.createType(name.getURI, attributes)
+      val dtgField = metadata.read(featureName, DTGFIELD_KEY).getOrElse(core.DEFAULT_DTG_PROPERTY_NAME)
+      val indexSchema = metadata.read(featureName, SCHEMA_KEY).orNull
+      // If no data is written, we default to 'false' in order to support old tables.
+      val sharingBoolean = metadata.read(featureName, SHARED_TABLES_KEY).getOrElse("false")
+
+      sft.getUserData.put(core.index.SF_PROPERTY_START_TIME, dtgField)
+      sft.getUserData.put(core.index.SF_PROPERTY_END_TIME, dtgField)
+      sft.getUserData.put(core.index.SFT_INDEX_SCHEMA, indexSchema)
+      core.index.setTableSharing(sft, new java.lang.Boolean(sharingBoolean))
+      sft
+    }.orNull
+  }
 
   // Implementation of Abstract method
   def getFeatureReader(featureName: String): AccumuloFeatureReader = getFeatureReader(featureName, Query.ALL)
@@ -723,14 +775,14 @@ class AccumuloDataStore(val connector: Connector,
   }
 
   /* create a general purpose writer that is capable of insert, deletes, and updates */
-  override def createFeatureWriter(typeName: String, transaction: Transaction): SFFeatureWriter = {
+  override def getFeatureWriter(typeName: String, filter: Filter, transaction: Transaction): SFFeatureWriter = {
     validateMetadata(typeName)
     checkWritePermissions(typeName)
     val sft = getSchema(typeName)
     val indexSchemaFmt = getIndexSchemaFmt(typeName)
     val fe = SimpleFeatureEncoder(sft, getFeatureEncoding(sft))
     val encoder = IndexSchema.buildKeyEncoder(indexSchemaFmt, fe)
-    new ModifyAccumuloFeatureWriter(sft, encoder, connector, fe, writeVisibilities, this)
+    new ModifyAccumuloFeatureWriter(sft, encoder, connector, fe, writeVisibilities, filter, this)
   }
 
   /* optimized for GeoTools API to return writer ONLY for appending (aka don't scan table) */
@@ -755,8 +807,8 @@ class AccumuloDataStore(val connector: Connector,
   def createSpatioTemporalIdxScanner(sft: SimpleFeatureType, numThreads: Int): BatchScanner = {
     logger.trace(s"Creating ST batch scanner with $numThreads threads")
     if (catalogTableFormat(sft)) {
-      connector.createBatchScanner(getSpatioTemporalIdxTableName(sft), 
-                                   authorizationsProvider.getAuthorizations, 
+      connector.createBatchScanner(getSpatioTemporalIdxTableName(sft),
+                                   authorizationsProvider.getAuthorizations,
                                    numThreads)
     } else {
       connector.createBatchScanner(catalogTable, authorizationsProvider.getAuthorizations, numThreads)
@@ -821,7 +873,7 @@ object AccumuloDataStore {
    * @return
    */
   def formatRecordTableName(catalogTable: String, featureType: SimpleFeatureType) =
-    formatTableName(catalogTable, featureType, "records")
+    formatTableName(catalogTable, featureType, TableSuffix.Records)
 
   /**
    * Format spatio-temoral index table name for Accumulo...table name is stored in metadata for other usage
@@ -831,7 +883,7 @@ object AccumuloDataStore {
    * @return
    */
   def formatSpatioTemporalIdxTableName(catalogTable: String, featureType: SimpleFeatureType) =
-    formatTableName(catalogTable, featureType, "st_idx")
+    formatTableName(catalogTable, featureType, TableSuffix.STIdx)
 
   /**
    * Format attribute index table name for Accumulo...table name is stored in metadata for other usage
@@ -841,7 +893,7 @@ object AccumuloDataStore {
    * @return
    */
   def formatAttrIdxTableName(catalogTable: String, featureType: SimpleFeatureType) =
-    formatTableName(catalogTable, featureType, "attr_idx")
+    formatTableName(catalogTable, featureType, TableSuffix.AttrIdx)
 
   /**
    * Format queries table name for Accumulo...table name is stored in metadata for other usage

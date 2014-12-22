@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Commonwealth Computer Research, Inc.
+ * Copyright 2014 Commonwealth Computer Research, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.locationtech.geomesa.core.data
 
+import java.text.SimpleDateFormat
 import java.util.Date
 
 import com.vividsolutions.jts.geom.Coordinate
@@ -26,12 +27,13 @@ import org.apache.accumulo.core.data.{Mutation, Range}
 import org.apache.accumulo.core.iterators.user.VersioningIterator
 import org.apache.accumulo.core.security.Authorizations
 import org.apache.commons.codec.binary.Hex
+import org.apache.hadoop.io.Text
 import org.geotools.data._
 import org.geotools.data.collection.ListFeatureCollection
 import org.geotools.data.simple.SimpleFeatureStore
 import org.geotools.factory.{CommonFactoryFinder, Hints}
-import org.geotools.feature.DefaultFeatureCollection
 import org.geotools.feature.simple.SimpleFeatureBuilder
+import org.geotools.feature.{DefaultFeatureCollection, NameImpl}
 import org.geotools.filter.text.cql2.CQL
 import org.geotools.geometry.jts.JTSFactoryFinder
 import org.geotools.process.vector.TransformProcess
@@ -42,13 +44,14 @@ import org.junit.runner.RunWith
 import org.locationtech.geomesa.core.index._
 import org.locationtech.geomesa.core.iterators.TestData
 import org.locationtech.geomesa.core.security.{AuthorizationsProvider, DefaultAuthorizationsProvider, FilteringAuthorizationsProvider}
-import org.locationtech.geomesa.core.util.{SelfClosingIterator, CloseableIterator}
+import org.locationtech.geomesa.core.util.{CloseableIterator, SelfClosingIterator}
 import org.locationtech.geomesa.feature.AvroSimpleFeatureFactory
 import org.locationtech.geomesa.utils.geotools.Conversions._
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.locationtech.geomesa.utils.text.WKTUtils
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 import org.opengis.filter.Filter
+import org.opengis.filter.sort.{SortBy, SortOrder}
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
 
@@ -67,23 +70,6 @@ class AccumuloDataStoreTest extends Specification {
   val featureFactory = CommonFactoryFinder.getFeatureFactory(hints)
   val WGS84 = DefaultGeographicCRS.WGS84
   val gf = JTSFactoryFinder.getGeometryFactory
-  def buildTestIndexSchemaFormat(featureName: String) = new IndexSchemaBuilder("~").randomNumber(3).constant(featureName).geoHash(0, 3).date("yyyyMMdd").nextPart().geoHash(3, 2).nextPart().id().build()
-
-  def createStore: AccumuloDataStore = {
-    // need to add a unique ID, otherwise create schema will throw an exception
-    id = id + 1
-    // the specific parameter values should not matter, as we
-    // are requesting a mock data store connection to Accumulo
-    DataStoreFinder.getDataStore(Map(
-      "instanceId"        -> "mycloud",
-      "zookeepers"        -> "zoo1:2181,zoo2:2181,zoo3:2181",
-      "user"              -> "myuser",
-      "password"          -> "mypassword",
-      "auths"             -> "A,B,C",
-      "tableName"         -> f"testwrite$id%d",
-      "useMock"           -> "true",
-      "featureEncoding"   -> "avro")).asInstanceOf[AccumuloDataStore]
-  }
 
   "AccumuloDataStore" should {
     "create a data store" >> {
@@ -175,6 +161,18 @@ class AccumuloDataStoreTest extends Specification {
           "where schema matches" >> { results.getSchema should be equalTo sft }
           "and there are no results" >> { features.hasNext should be equalTo false }
         }
+      }
+
+      "create a schema with custom record splitting options" >> {
+        val spec = "name:String,dtg:Date,*geom:Point:srid=4326;table.splitter.class=org.locationtech.geomesa.core.data.DigitSplitter,table.splitter.options=fmt:%02d,min:0,max:99"
+        val sft = SimpleFeatureTypes.createType("customsplit", spec)
+        org.locationtech.geomesa.core.index.setTableSharing(sft, false)
+        ds.createSchema(sft)
+        val recTable = ds.getRecordTableForType(sft)
+        val splits = ds.connector.tableOperations().listSplits(recTable)
+        splits.size() must be equalTo 100
+        splits.head must be equalTo new Text("00")
+        splits.last must be equalTo new Text("99")
       }
 
       "process a DWithin query correctly" in {
@@ -281,7 +279,7 @@ class AccumuloDataStoreTest extends Specification {
         featureCollection.add(liveFeature)
         fs.addFeatures(featureCollection)
 
-        val query = new Query("transformtest", Filter.INCLUDE,
+        val query = new Query(sftName, Filter.INCLUDE,
           Array("name", "derived=strConcat('hello',name)", "geom"))
 
         // Let's read out what we wrote.
@@ -327,7 +325,7 @@ class AccumuloDataStoreTest extends Specification {
       }
 
       "handle setPropertyNames transformations" in {
-        val sftName = "transformtest0"
+        val sftName = "transformtest7"
         val sft = SimpleFeatureTypes.createType(sftName, s"name:String,dtg:Date,*geom:Point:srid=4326")
         sft.getUserData.put(SF_PROPERTY_START_TIME, "dtg")
         ds.createSchema(sft)
@@ -379,7 +377,7 @@ class AccumuloDataStoreTest extends Specification {
         featureCollection.add(liveFeature)
         fs.addFeatures(featureCollection)
 
-        val query = new Query("transformtest", Filter.INCLUDE,
+        val query = new Query(sftName, Filter.INCLUDE,
           Array("name", "derived=strConcat(attr,name)", "geom"))
 
         // Let's read out what we wrote.
@@ -417,8 +415,7 @@ class AccumuloDataStoreTest extends Specification {
         featureCollection.add(liveFeature)
         fs.addFeatures(featureCollection)
 
-        val query = new Query("transformtest", Filter.INCLUDE,
-          Array("name", "geom"))
+        val query = new Query(sftName, Filter.INCLUDE, Array("name", "geom"))
 
         // Let's read out what we wrote.
         val results = fs.getFeatures(query)
@@ -432,6 +429,62 @@ class AccumuloDataStoreTest extends Specification {
         "and correct results" >> {
           "fid-1=testType|POINT (45 49)" mustEqual DataUtilities.encodeFeature(f)
         }
+      }
+
+      "handle transformations with filters on other attributes" in {
+        // create the data store
+        val sftName = "test4transform"
+        val sft = SimpleFeatureTypes.createType(sftName, s"name:String,attr:String,dtg:Date,*geom:Point:srid=4326")
+        sft.getUserData.put(SF_PROPERTY_START_TIME, "dtg")
+        ds.createSchema(sft)
+
+        val fs = ds.getFeatureSource(sftName).asInstanceOf[AccumuloFeatureStore]
+
+        // create a feature
+        val geom = WKTUtils.read("POINT(50.0 49.0)")
+        val builder = new SimpleFeatureBuilder(sft, featureFactory)
+        builder.addAll(List("testType", "v1", new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").parse("2014-01-01T12:30:00.000+0000"), geom))
+        val liveFeature = builder.buildFeature("fid-1xxx")
+
+        // make sure we ask the system to re-use the provided feature-ID
+        liveFeature.getUserData.put(Hints.USE_PROVIDED_FID, java.lang.Boolean.TRUE)
+        val featureCollection = new DefaultFeatureCollection(sftName, sft)
+        featureCollection.add(liveFeature)
+        fs.addFeatures(featureCollection)
+
+        val query = new Query(sftName,
+                              CQL.toFilter("bbox(geom,-180,-90,180,90) AND dtg BETWEEN '2013-01-01T00:00:00.000Z' AND '2015-01-02T00:00:00.000Z'"),
+                              Array("geom"))
+
+        // Let's read out what we wrote.
+        val results = fs.getFeatures(query)
+        val features = results.features
+        "return the data" >> {
+          features.hasNext must beTrue
+        }
+        "with correct results" >> {
+          val f = features.next()
+          DataUtilities.encodeFeature(f) mustEqual "fid-1xxx=POINT (50 49)"
+        }
+      }
+
+      "handle requests with namespaces" in {
+        // create the data store
+        val ns = "mytestns"
+        val sftName = "namespacetest"
+        val sft = SimpleFeatureTypes.createType(sftName, s"name:String,dtg:Date,*geom:Point:srid=4326")
+        sft.getUserData.put(SF_PROPERTY_START_TIME, "dtg")
+        ds.createSchema(sft)
+
+        val schemaWithoutNs = ds.getSchema(sftName)
+
+        schemaWithoutNs.getName.getNamespaceURI must beNull
+        schemaWithoutNs.getName.getLocalPart mustEqual sftName
+
+        val schemaWithNs = ds.getSchema(new NameImpl(ns, sftName))
+
+        schemaWithNs.getName.getNamespaceURI mustEqual ns
+        schemaWithNs.getName.getLocalPart mustEqual sftName
       }
     }
 
@@ -479,7 +532,6 @@ class AccumuloDataStoreTest extends Specification {
         results.size() mustEqual 226
       }
     }
-
 
     "provide ability to configure auth provider by static auths" in {
       // create the data store
@@ -774,9 +826,10 @@ class AccumuloDataStoreTest extends Specification {
 
       "typeOf feature source must be ListFeatureCollection" >> {
         val fc = ds.getFeatureSource(sftName).getFeatures(Filter.INCLUDE)
-        fc must haveClass[ListFeatureCollection]
+        fc must haveClass[CachingAccumuloFeatureCollection]
       }
     }
+
     "hex encode multibyte chars as multiple underscore + hex" in {
       val table = "testing_chinese_features"
       val ds = DataStoreFinder.getDataStore(Map(
@@ -820,100 +873,6 @@ class AccumuloDataStoreTest extends Specification {
       c.tableOperations().exists(s"${table}_${encodedSFT}_attr_idx") must beTrue
     }
 
-    /**
-     * Executes a scan for metadata information in the catalog
-     *
-     * @param ds the Accumulo datastore
-     * @param sftName the name of the SimpleFeatureType
-     */
-    def getScannerResults(ds: AccumuloDataStore, sftName: String): Option[String] = {
-      val scanner = ds.connector.createScanner(ds.catalogTable, ds.authorizationsProvider.getAuthorizations)
-      scanner.setRange(new Range(s"${METADATA_TAG }_$sftName"))
-
-      val name = "version-" + sftName
-      val cfg = new IteratorSetting(1, name, classOf[VersioningIterator])
-      VersioningIterator.setMaxVersions(cfg, 1)
-      scanner.addScanIterator(cfg)
-
-      val iter = scanner.iterator
-      val result =
-        if (iter.hasNext) {
-          Some(iter.next.getValue.toString)
-        } else {
-          None
-        }
-
-      scanner.close()
-      scanner.removeScanIterator(name)
-      result
-    }
-
-    def buildPreSecondaryIndexTable(params: Map[String, String], sftName: String) = {
-      val rowIds = List(
-        "09~regressionTestType~v00~20120102",
-        "95~regressionTestType~v00~20120102",
-        "53~regressionTestType~v00~20120102",
-        "77~regressionTestType~v00~20120102",
-        "36~regressionTestType~v00~20120102",
-        "91~regressionTestType~v00~20120102")
-      val hex = new Hex
-      val indexValues = List(
-        "000000013000000015000000000140468000000000004046800000000000000001349ccf6e18",
-        "000000013100000015000000000140468000000000004046800000000000000001349ccf6e18",
-        "000000013200000015000000000140468000000000004046800000000000000001349ccf6e18",
-        "000000013300000015000000000140468000000000004046800000000000000001349ccf6e18",
-        "000000013400000015000000000140468000000000004046800000000000000001349ccf6e18",
-        "000000013500000015000000000140468000000000004046800000000000000001349ccf6e18").map {v =>
-        hex.decode(v.getBytes)}
-      val sft = SimpleFeatureTypes.createType(sftName, s"name:String,$geotimeAttributes")
-      sft.getUserData.put(SF_PROPERTY_START_TIME, "dtg")
-
-      val instance = new MockInstance(params("instanceId"))
-      val connector = instance.getConnector(params("user"), new PasswordToken(params("password").getBytes))
-      connector.tableOperations.create(params("tableName"))
-
-      val bw = connector.createBatchWriter(params("tableName"), new BatchWriterConfig)
-
-      // Insert metadata
-      val metadataMutation = new Mutation(s"~METADATA_$sftName")
-      metadataMutation.put("attributes", "", "name:String,geom:Geometry:srid=4326,dtg:Date,dtg_end_time:Date")
-      metadataMutation.put("bounds", "", "45.0:45.0:49.0:49.0")
-      metadataMutation.put("schema", "", s"%~#s%99#r%$sftName#cstr%0,3#gh%yyyyMMdd#d::%~#s%3,2#gh::%~#s%#id")
-      bw.addMutation(metadataMutation)
-
-      // Insert features
-      getFeatures(sft).zipWithIndex.foreach { case(sf, idx) =>
-        val encoded = DataUtilities.encodeFeature(sf)
-        val index = new Mutation(rowIds(idx))
-        index.put("00".getBytes,sf.getID.getBytes, indexValues(idx))
-        bw.addMutation(index)
-
-        val data = new Mutation(rowIds(idx))
-        data.put(sf.getID, "SimpleFeatureAttribute", encoded)
-        bw.addMutation(data)
-      }
-
-      bw.flush
-      bw.close
-    }
-
-    def getFeatureStore(table: String, sftName: String, ds: AccumuloDataStore, sharedTables: Boolean = true): AccumuloFeatureStore = {
-      val sft = SimpleFeatureTypes.createType(sftName, s"name:String,dtg:Date,*geom:Point:srid=4326")
-      org.locationtech.geomesa.core.index.setTableSharing(sft, sharedTables)
-      ds.createSchema(sft)
-      val fs = ds.getFeatureSource(sftName).asInstanceOf[AccumuloFeatureStore]
-      val geom = WKTUtils.read("POINT(45.0 49.0)")
-      val builder = new SimpleFeatureBuilder(sft, featureFactory)
-      builder.addAll(List(sftName, null, geom))
-      val liveFeature = builder.buildFeature("fid-1")
-
-      liveFeature.getUserData.put(Hints.USE_PROVIDED_FID, java.lang.Boolean.TRUE)
-      val featureCollection = new DefaultFeatureCollection(sftName, sft)
-      featureCollection.add(liveFeature)
-      fs.addFeatures(featureCollection)
-      fs
-    }
-
     "delete the schema completely" in {
       val table = "testing_delete_schema"
       val sftName = "test"
@@ -927,7 +886,7 @@ class AccumuloDataStoreTest extends Specification {
 
       ds should not be null
 
-      val fs = getFeatureStore(table, sftName, ds, false)
+      val fs = getFeatureStore(sftName, ds, false)
 
       val mockInstance = new MockInstance("mycloud")
       val c = mockInstance.getConnector("myuser", new PasswordToken("mypassword".getBytes("UTF8")))
@@ -992,8 +951,8 @@ class AccumuloDataStoreTest extends Specification {
       val sftName = "test"
       val sftName2 = "test2"
 
-      val fs = getFeatureStore(table, sftName, ds, false)
-      val fs2 = getFeatureStore(table, sftName2, ds, false)
+      val fs = getFeatureStore(sftName, ds, false)
+      val fs2 = getFeatureStore(sftName2, ds, false)
 
       val mockInstance = new MockInstance("mycloud")
       val c = mockInstance.getConnector("myuser", new PasswordToken("mypassword".getBytes("UTF8")))
@@ -1088,6 +1047,237 @@ class AccumuloDataStoreTest extends Specification {
         retrievedSchema mustEqual originalSchema
       }
     }
+
+    "Provide a feature update implementation" >> {
+      val sftName = "featureUpdateTest"
+      val sft = SimpleFeatureTypes.createType(sftName, "name:String,dtg:Date,*geom:Point:srid=4326")
+      val ds = DataStoreFinder.getDataStore(Map(
+        "instanceId"        -> "mycloud",
+        "zookeepers"        -> "zoo1:2181,zoo2:2181,zoo3:2181",
+        "user"              -> "myuser",
+        "password"          -> "mypassword",
+        "tableName"         -> sftName,
+        "useMock"           -> "true"))
+      ds.createSchema(sft)
+      val builder = AvroSimpleFeatureFactory.featureBuilder(ds.getSchema(sftName))
+      val features = (0 until 6).map { i =>
+        builder.reset()
+        builder.set("geom", WKTUtils.read("POINT(45.0 45.0)"))
+        builder.set("dtg", "2012-01-02T05:06:07.000Z")
+        builder.set("name",i.toString)
+        val sf = builder.buildFeature(i.toString)
+        sf.getUserData()(Hints.USE_PROVIDED_FID) = java.lang.Boolean.TRUE
+        sf
+      }
+      val fs = ds.getFeatureSource(sftName).asInstanceOf[AccumuloFeatureStore]
+      fs.addFeatures(new ListFeatureCollection(sft, features))
+
+      val filter = ff.id(ff.featureId("2"))
+      val writer = ds.getFeatureWriter(sftName, filter, Transaction.AUTO_COMMIT)
+      writer.hasNext must beTrue
+      val feat = writer.next
+      feat.getID mustEqual "2"
+      feat.getAttribute("name") mustEqual "2"
+      feat.setAttribute("name", "2-updated")
+      writer.write()
+      writer.hasNext must beFalse
+      writer.close()
+
+      val reader = ds.getFeatureReader(new Query(sftName, filter), Transaction.AUTO_COMMIT)
+      reader.hasNext must beTrue
+      val updated = reader.next()
+      reader.hasNext must beFalse
+      reader.close()
+      updated.getID mustEqual("2")
+      updated.getAttribute("name") mustEqual "2-updated"
+    }
+  }
+
+  "AccumuloFeatureStore" should {
+    val ds = createStore
+    "compute target schemas from transformation expressions" in {
+      val origSFT = SimpleFeatureTypes.createType("test", "name:String,dtg:Date,*geom:Point:srid=4326")
+      origSFT.getUserData.put(SF_PROPERTY_START_TIME, "dtg")
+      val definitions =
+        TransformProcess.toDefinition("name=name;helloName=strConcat('hello', name);geom=geom")
+
+      val result = AccumuloFeatureStore.computeSchema(origSFT, definitions.toSeq)
+      println(SimpleFeatureTypes.encodeType(result))
+
+      (result must not).beNull
+    }
+
+    "support sorting and handle time bounds" >> {
+      val sft = SimpleFeatureTypes.createType("test", "name:String,dtg:Date,*geom:Point:srid=4326")
+      sft.getUserData.put(SF_PROPERTY_START_TIME, "dtg")
+
+      ds.createSchema(sft)
+      val fs = ds.getFeatureSource("test").asInstanceOf[SimpleFeatureStore]
+      fs.getQueryCapabilities.supportsSorting(Array(SortBy.NATURAL_ORDER)) must beTrue
+      fs.getQueryCapabilities.supportsSorting(Array(ff.sort("dtg", SortOrder.ASCENDING))) must beTrue
+
+      val defaultInterval = ds.getTimeBounds(sft.getTypeName)
+      defaultInterval.getStartMillis must be equalTo 0
+
+      val sfBuilder = new SimpleFeatureBuilder(sft)
+      sfBuilder.reset()
+      val date1 = new DateTime("2014-01-02").toDate
+      sfBuilder.addAll(List("johndoe", date1, gf.createPoint(new Coordinate(0, 0))))
+      val f1 = sfBuilder.buildFeature("f1")
+
+      fs.addFeatures(DataUtilities.collection(List(f1)))
+
+      val secondInterval = ds.getTimeBounds(sft.getTypeName)
+      secondInterval.getStartMillis must be equalTo date1.getTime
+      secondInterval.getEndMillis must be equalTo date1.getTime
+
+      sfBuilder.reset()
+      val date2 = new DateTime("2014-01-03").toDate
+      sfBuilder.addAll(List("johndoe", date2, gf.createPoint(new Coordinate(0, 0))))
+      val f2 = sfBuilder.buildFeature("f2")
+
+      sfBuilder.reset()
+      val date3 = new DateTime("2014-01-01").toDate
+      sfBuilder.addAll(List("johndoe", date3 , gf.createPoint(new Coordinate(0, 0))))
+      val f3 = sfBuilder.buildFeature("f3")
+
+      fs.addFeatures(DataUtilities.collection(List(f2, f3)))
+      fs.flush()
+
+      val thirdInterval = ds.getTimeBounds(sft.getTypeName)
+      thirdInterval.getStartMillis must be equalTo date3.getTime
+      thirdInterval.getEndMillis must be equalTo date2.getTime
+
+      "ascending on date" >> {
+        val dtgAscendingQ = new Query("test", Filter.INCLUDE)
+        dtgAscendingQ.setSortBy(Array(ff.sort("dtg", SortOrder.ASCENDING)))
+
+        val res: Seq[Long] = fs.getFeatures(dtgAscendingQ).features().toIterator.map(_.getAttribute("dtg").asInstanceOf[Date].getTime).toSeq
+        res must beSorted
+        res.head must beLessThan(res(1))
+      }
+
+      "descending on date" >> {
+        val dtgDescending = new Query("test", Filter.INCLUDE)
+        dtgDescending.setSortBy(Array(ff.sort("dtg", SortOrder.DESCENDING)))
+
+        val res: Seq[Long] = fs.getFeatures(dtgDescending).features().toIterator.map(_.getAttribute("dtg").asInstanceOf[Date].getTime).toSeq
+        res.reverse must beSorted
+        res.head must beGreaterThan(res(1))
+      }
+    }
+  }
+
+  def buildTestIndexSchemaFormat(featureName: String) = new IndexSchemaBuilder("~").randomNumber(3).constant(featureName).geoHash(0, 3).date("yyyyMMdd").nextPart().geoHash(3, 2).nextPart().id().build()
+
+  def createStore: AccumuloDataStore = {
+    // need to add a unique ID, otherwise create schema will throw an exception
+    id = id + 1
+    // the specific parameter values should not matter, as we
+    // are requesting a mock data store connection to Accumulo
+    DataStoreFinder.getDataStore(Map(
+      "instanceId"        -> "mycloud",
+      "zookeepers"        -> "zoo1:2181,zoo2:2181,zoo3:2181",
+      "user"              -> "myuser",
+      "password"          -> "mypassword",
+      "auths"             -> "A,B,C",
+      "tableName"         -> f"testwrite$id%d",
+      "useMock"           -> "true",
+      "featureEncoding"   -> "avro")).asInstanceOf[AccumuloDataStore]
+  }
+
+  def getFeatureStore(sftName: String, ds: AccumuloDataStore, sharedTables: Boolean = true): AccumuloFeatureStore = {
+    val sft = SimpleFeatureTypes.createType(sftName, s"name:String,dtg:Date,*geom:Point:srid=4326")
+    org.locationtech.geomesa.core.index.setTableSharing(sft, sharedTables)
+    ds.createSchema(sft)
+    val fs = ds.getFeatureSource(sftName).asInstanceOf[AccumuloFeatureStore]
+    val geom = WKTUtils.read("POINT(45.0 49.0)")
+    val builder = new SimpleFeatureBuilder(sft, featureFactory)
+    builder.addAll(List(sftName, null, geom))
+    val liveFeature = builder.buildFeature("fid-1")
+
+    liveFeature.getUserData.put(Hints.USE_PROVIDED_FID, java.lang.Boolean.TRUE)
+    val featureCollection = new DefaultFeatureCollection(sftName, sft)
+    featureCollection.add(liveFeature)
+    fs.addFeatures(featureCollection)
+    fs
+  }
+
+  /**
+   * Executes a scan for metadata information in the catalog
+   *
+   * @param ds the Accumulo datastore
+   * @param sftName the name of the SimpleFeatureType
+   */
+  def getScannerResults(ds: AccumuloDataStore, sftName: String): Option[String] = {
+    val scanner = ds.connector.createScanner(ds.catalogTable, ds.authorizationsProvider.getAuthorizations)
+    scanner.setRange(new Range(s"${METADATA_TAG }_$sftName"))
+
+    val name = "version-" + sftName
+    val cfg = new IteratorSetting(1, name, classOf[VersioningIterator])
+    VersioningIterator.setMaxVersions(cfg, 1)
+    scanner.addScanIterator(cfg)
+
+    val iter = scanner.iterator
+    val result =
+      if (iter.hasNext) {
+        Some(iter.next.getValue.toString)
+      } else {
+        None
+      }
+
+    scanner.close()
+    scanner.removeScanIterator(name)
+    result
+  }
+
+  def buildPreSecondaryIndexTable(params: Map[String, String], sftName: String) = {
+    val rowIds = List(
+      "09~regressionTestType~v00~20120102",
+      "95~regressionTestType~v00~20120102",
+      "53~regressionTestType~v00~20120102",
+      "77~regressionTestType~v00~20120102",
+      "36~regressionTestType~v00~20120102",
+      "91~regressionTestType~v00~20120102")
+    val hex = new Hex
+    val indexValues = List(
+      "000000013000000015000000000140468000000000004046800000000000000001349ccf6e18",
+      "000000013100000015000000000140468000000000004046800000000000000001349ccf6e18",
+      "000000013200000015000000000140468000000000004046800000000000000001349ccf6e18",
+      "000000013300000015000000000140468000000000004046800000000000000001349ccf6e18",
+      "000000013400000015000000000140468000000000004046800000000000000001349ccf6e18",
+      "000000013500000015000000000140468000000000004046800000000000000001349ccf6e18").map {v =>
+      hex.decode(v.getBytes)}
+    val sft = SimpleFeatureTypes.createType(sftName, s"name:String,$geotimeAttributes")
+    sft.getUserData.put(SF_PROPERTY_START_TIME, "dtg")
+
+    val instance = new MockInstance(params("instanceId"))
+    val connector = instance.getConnector(params("user"), new PasswordToken(params("password").getBytes))
+    connector.tableOperations.create(params("tableName"))
+
+    val bw = connector.createBatchWriter(params("tableName"), new BatchWriterConfig)
+
+    // Insert metadata
+    val metadataMutation = new Mutation(s"~METADATA_$sftName")
+    metadataMutation.put("attributes", "", "name:String,geom:Geometry:srid=4326,dtg:Date,dtg_end_time:Date")
+    metadataMutation.put("bounds", "", "45.0:45.0:49.0:49.0")
+    metadataMutation.put("schema", "", s"%~#s%99#r%$sftName#cstr%0,3#gh%yyyyMMdd#d::%~#s%3,2#gh::%~#s%#id")
+    bw.addMutation(metadataMutation)
+
+    // Insert features
+    getFeatures(sft).zipWithIndex.foreach { case(sf, idx) =>
+      val encoded = DataUtilities.encodeFeature(sf)
+      val index = new Mutation(rowIds(idx))
+      index.put("00".getBytes,sf.getID.getBytes, indexValues(idx))
+      bw.addMutation(index)
+
+      val data = new Mutation(rowIds(idx))
+      data.put(sf.getID, "SimpleFeatureAttribute", encoded)
+      bw.addMutation(data)
+    }
+
+    bw.flush
+    bw.close
   }
 
   def getFeatures(sft: SimpleFeatureType) = (0 until 6).map { i =>
@@ -1100,18 +1290,5 @@ class AccumuloDataStoreTest extends Specification {
     sf
   }
 
-  "AccumuloFeatureStore" should {
-    "compute target schemas from transformation expressions" in {
-      val origSFT = SimpleFeatureTypes.createType("test", "name:String,dtg:Date,*geom:Point:srid=4326")
-      origSFT.getUserData.put(SF_PROPERTY_START_TIME, "dtg")
-      val definitions =
-        TransformProcess.toDefinition("name=name;helloName=strConcat('hello', name);geom=geom")
-
-      val result = AccumuloFeatureStore.computeSchema(origSFT, definitions.toSeq)
-      println(SimpleFeatureTypes.encodeType(result))
-
-      (result must not).beNull
-    }
-  }
 
 }

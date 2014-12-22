@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Commonwealth Computer Research, Inc.
+ * Copyright 2014 Commonwealth Computer Research, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 package org.locationtech.geomesa.utils.geotools
 
 import com.vividsolutions.jts.geom._
-import org.geotools.geometry.jts.{JTS, JTSFactoryFinder}
+import org.geotools.geometry.jts.JTSFactoryFinder
 import org.geotools.referencing.GeodeticCalculator
 import org.geotools.referencing.crs.DefaultGeographicCRS
 
@@ -26,7 +26,6 @@ import org.geotools.referencing.crs.DefaultGeographicCRS
  */
 object GeometryUtils {
 
-  val geoCalc = new GeodeticCalculator(DefaultGeographicCRS.WGS84)
   val geoFactory = JTSFactoryFinder.getGeometryFactory
 
   /** Convert meters to dec degrees based on widest point in dec degrees of circles at bounding box corners */

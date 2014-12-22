@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  ~ Copyright 2013 Commonwealth Computer Research, Inc.
+  ~ Copyright 2014 Commonwealth Computer Research, Inc.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
     <parent>
         <groupId>org.locationtech.geomesa</groupId>
         <artifactId>geomesa-accumulo1.5</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.0-rc.3-SNAPSHOT</version>
     </parent>
 
     <artifactId>geomesa-core-accumulo1.5</artifactId>
@@ -95,6 +95,14 @@
             <groupId>org.calrissian.mango</groupId>
             <artifactId>mango-core</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-csv</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+        </dependency>
 
         <!-- provided dependencies -->
         <dependency>
@@ -120,6 +128,10 @@
         <dependency>
             <groupId>com.typesafe</groupId>
             <artifactId>scalalogging-slf4j_2.10</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>javax.media</groupId>
+            <artifactId>jai_core</artifactId>
         </dependency>
 
         <!-- test dependencies -->

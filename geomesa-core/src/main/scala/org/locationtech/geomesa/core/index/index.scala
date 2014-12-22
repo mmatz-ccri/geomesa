@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Commonwealth Computer Research, Inc.
+ * Copyright 2014 Commonwealth Computer Research, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package org.locationtech.geomesa.core
 
+import java.util.{List => JList}
+
 import com.typesafe.scalalogging.slf4j.Logging
 import org.apache.accumulo.core.data.{Key, Value, Range => AccRange}
 import org.geotools.data.Query
@@ -26,7 +28,6 @@ import org.joda.time.DateTime
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.opengis.feature.simple.SimpleFeatureType
 import org.opengis.filter.identity.FeatureId
-
 
 /**
  * These are package-wide constants.
@@ -78,7 +79,6 @@ package object index {
     if(getTableSharing(sft)) s"${sft.getTypeName}~"
     else                     ""
 
-
   val spec = "geom:Geometry:srid=4326,dtg:Date,dtg_end_time:Date"
   val indexSFT = SimpleFeatureTypes.createType("geomesa-idx", spec)
 
@@ -91,6 +91,10 @@ package object index {
     val WIDTH_KEY   = new IntegerKey(256)
     val HEIGHT_KEY  = new IntegerKey(256)
     val BBOX_KEY    = new ClassKey(classOf[ReferencedEnvelope])
+    val TEMPORAL_DENSITY_KEY = new ClassKey(classOf[java.lang.Boolean])
+
+    val TIME_INTERVAL_KEY = new ClassKey(classOf[org.joda.time.Interval])
+    val TIME_BUCKETS_KEY = new IntegerKey(256)
   }
 
   type ExplainerOutputType = ( => String) => Unit

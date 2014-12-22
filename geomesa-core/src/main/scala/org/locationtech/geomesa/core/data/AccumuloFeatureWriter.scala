@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Commonwealth Computer Research, Inc.
+ * Copyright 2014 Commonwealth Computer Research, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ import org.apache.accumulo.core.client.{BatchWriterConfig, Connector}
 import org.apache.accumulo.core.data.{Key, Mutation, Value}
 import org.apache.hadoop.mapred.{RecordWriter, Reporter}
 import org.apache.hadoop.mapreduce.TaskInputOutputContext
-import org.geotools.data.DataUtilities
 import org.geotools.data.simple.SimpleFeatureWriter
+import org.geotools.data.{DataUtilities, Query}
 import org.geotools.factory.Hints
 import org.geotools.filter.identity.FeatureIdImpl
 import org.locationtech.geomesa.core.data.tables.{AttributeTable, RecordTable, SpatioTemporalTable}
@@ -32,6 +32,7 @@ import org.locationtech.geomesa.core.index._
 import org.locationtech.geomesa.feature.{AvroSimpleFeature, AvroSimpleFeatureFactory}
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
+import org.opengis.filter.Filter
 
 object AccumuloFeatureWriter {
 
@@ -69,7 +70,7 @@ abstract class AccumuloFeatureWriter(featureType: SimpleFeatureType,
   extends SimpleFeatureWriter
           with Logging {
 
-  val indexedAttributes = SimpleFeatureTypes.getIndexedAttributes(featureType)
+  val indexedAttributes = SimpleFeatureTypes.getSecondaryIndexedAttributes(featureType)
 
   val connector = ds.connector
 
@@ -159,10 +160,12 @@ class ModifyAccumuloFeatureWriter(featureType: SimpleFeatureType,
                                   connector: Connector,
                                   encoder: SimpleFeatureEncoder,
                                   visibility: String,
+                                  filter: Filter,
                                   dataStore: AccumuloDataStore)
   extends AccumuloFeatureWriter(featureType, indexEncoder, encoder, dataStore, visibility) {
 
-  val reader = dataStore.getFeatureReader(featureType.getName.toString)
+  val reader = dataStore.getFeatureReader(featureType.getTypeName, new Query(featureType.getTypeName, filter))
+
   var live: SimpleFeature = null      /* feature to let user modify   */
   var original: SimpleFeature = null  /* feature returned from reader */
 
@@ -192,8 +195,7 @@ class ModifyAccumuloFeatureWriter(featureType: SimpleFeatureType,
 
   override def remove() =
     if (original != null) {
-      removers.foreach { r => r(original)}
-      multiBWWriter.flush()
+      removers.foreach { r => r(original) }
     }
 
   override def hasNext = reader.hasNext

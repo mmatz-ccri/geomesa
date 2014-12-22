@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Commonwealth Computer Research, Inc.
+ * Copyright 2014 Commonwealth Computer Research, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ object FeatureIngestMapper
           context.getConfiguration)).asInstanceOf[AccumuloDataStore]
 
       featureType = ds.getSchema(featureName)
-      fw = ds.createFeatureWriter(featureName, Transaction.AUTO_COMMIT)
+      fw = ds.getFeatureWriterAppend(featureName, Transaction.AUTO_COMMIT)
     }
 
     override def map(key: LongWritable, value: Text, context: Mapper#Context) {
