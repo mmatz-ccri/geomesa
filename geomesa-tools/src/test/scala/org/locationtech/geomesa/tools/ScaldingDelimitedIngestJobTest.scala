@@ -16,7 +16,6 @@
 
 package org.locationtech.geomesa.tools
 
-import java.util.regex.MatchResult
 import java.util.{Date, UUID}
 
 import com.twitter.scalding.Args
@@ -32,7 +31,7 @@ import org.locationtech.geomesa.feature.AvroSimpleFeature
 import org.locationtech.geomesa.tools.Utils.IngestParams
 import org.locationtech.geomesa.tools.ingest.{ColsParser, ScaldingDelimitedIngestJob}
 import org.locationtech.geomesa.utils.geotools.Conversions._
-import org.locationtech.geomesa.utils.geotools.{Conversions, SimpleFeatureTypes}
+import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
 
@@ -326,7 +325,6 @@ class ScaldingDelimitedIngestJobTest extends Specification{
       val f = new AvroSimpleFeature(new FeatureIdImpl("test_type"), sft)
       ingest.ingestDataToFeature(testString, f)
 
-      import Conversions._
       type JList[T] = java.util.List[T]
       f.get[JList[Integer]](0).toList mustEqual List(9, 8, 7)
       f.point.getX mustEqual -78.4
