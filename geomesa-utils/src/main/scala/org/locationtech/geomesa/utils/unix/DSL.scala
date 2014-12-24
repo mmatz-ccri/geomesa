@@ -19,6 +19,8 @@ object DSL {
   trait ProcessingFunction {
     def name: String
     def evaluate(args: Array[AnyRef]): AnyRef
+
+    override def toString: String = name
   }
 
   def toInt(arg: Any): java.lang.Integer = arg match {
@@ -50,7 +52,8 @@ object DSL {
     }
   }
   case class ColRange(s: Int, e: Int) extends Expr {
-    override def evaluate(cols: Array[AnyRef]): Array[AnyRef] = (s to e).map(cols.apply).toArray
+    val end = if(e == Int.MaxValue) e else e+1
+    override def evaluate(cols: Array[AnyRef]): Array[AnyRef] = cols.drop(s).take(end)
 
     override def combine(acc: Array[AnyRef], o: AnyRef): Array[AnyRef] = acc ++ o.asInstanceOf[Array[AnyRef]]
   }
@@ -152,13 +155,19 @@ object DSL {
     def colRange = col ~ "-" ~ col ^^ {
       case s ~ "-" ~ e => ColRange(s.i, e.i)
     }
+    def colRangeBegin = "-" ~ col ^^ {
+      case "-" ~ e => ColRange(0, e.i)
+    }
+    def colRangeEnd   = col ~ "-" ^^ {
+      case s ~ "-" => ColRange(s.i, Int.MaxValue)
+    }
     def regexLit = "/" ~ "[^/]*".r ~ "/" ^^ {
       case "/" ~ re ~ "/" => RegexPattern(re)
     }
     def colAssignment: Parser[Expr] = col ~ "=" ~ expr ^^ {
       case i ~ "=" ~ expr => ColAssignment(i, expr)
     }
-    def atom = regexLit | colRange | col | lit
+    def atom = regexLit | colRange | colRangeBegin | colRangeEnd | col | lit
     def funcName = "[^()$,]*".r
     def applyFn: Parser[Expr] = "apply(" ~ funcName ~ "," ~ rep1sep(expr, ",") ~ ")" ^^ {
       case "apply(" ~ fn ~ "," ~ args ~ ")" => Apply(fnRegistry(fn), args)
@@ -208,6 +217,11 @@ object DSL {
       new FlowProcessor()
         .awk(
           """
+            |$1-
+          """.stripMargin
+        )
+        .awk(
+          """
             |apply(trim,$1-$5)
           """.stripMargin)
         .awk(
@@ -230,6 +244,11 @@ object DSL {
             |find($4,ell);
             |gsub(/ell/, $4, ALL);
             |point($8,$9)
+          """.stripMargin)
+        .awk(
+          """
+            |-$3;
+            |$3-
           """.stripMargin)
 
     val l = transformed.run(is).toList
