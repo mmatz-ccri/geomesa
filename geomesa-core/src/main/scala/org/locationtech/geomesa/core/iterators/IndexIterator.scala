@@ -16,17 +16,11 @@
 
 package org.locationtech.geomesa.core.iterators
 
+import com.typesafe.scalalogging.slf4j.Logging
 import org.apache.accumulo.core.data._
 import org.apache.accumulo.core.iterators.{IteratorEnvironment, SortedKeyValueIterator}
-import org.geotools.feature.simple.SimpleFeatureBuilder
-import org.geotools.filter.text.ecql.ECQL
-import org.locationtech.geomesa.core.data._
-import org.locationtech.geomesa.core.index
-import org.locationtech.geomesa.core.index._
-import org.locationtech.geomesa.feature.AvroSimpleFeatureFactory
-import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
-import org.opengis.feature.`type`.AttributeDescriptor
-import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
+import org.locationtech.geomesa.core.data.tables.SpatioTemporalTable
+import org.locationtech.geomesa.utils.stats.{AutoLoggingTimings, MethodProfiling, NoOpTimings, Timings}
 
 /**
  * This is an Index Only Iterator, to be used in situations where the data records are
@@ -35,67 +29,97 @@ import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
  *
  * This iterator returns as its nextKey the key for the index. nextValue is
  * the value for the INDEX, mapped into a SimpleFeature
- *
- * Note that this extends the SpatioTemporalIntersectingIterator, but never creates a dataSource
- * and hence never iterates through it.
  */
-class IndexIterator extends SpatioTemporalIntersectingIterator with SortedKeyValueIterator[Key, Value] {
+class IndexIterator
+    extends HasIteratorExtensions
+    with SortedKeyValueIterator[Key, Value]
+    with HasFeatureBuilder
+    with HasSpatioTemporalFilter
+    with HasFeatureDecoder
+    with HasTransforms
+    with HasInMemoryDeduplication
+    with MethodProfiling
+    with Logging {
 
-  import org.locationtech.geomesa.core._
+  // replace this with 'timings' to enable profile logging
+  import org.locationtech.geomesa.core.iterators.IndexIterator.noOpTimings
 
-  var featureBuilder: SimpleFeatureBuilder = null
-  var featureEncoder: SimpleFeatureEncoder = null
-  var outputAttributes: List[AttributeDescriptor] = null
-  var indexAttributes: List[AttributeDescriptor] = null
+  protected var topKey: Option[Key] = None
+  protected var topValue: Option[Value] = None
+  protected var source: SortedKeyValueIterator[Key, Value] = null
 
   override def init(source: SortedKeyValueIterator[Key, Value],
                     options: java.util.Map[String, String],
                     env: IteratorEnvironment) {
+
     TServerClassLoader.initClassLoader(logger)
 
-    val simpleFeatureTypeSpec = options.get(GEOMESA_ITERATORS_SIMPLE_FEATURE_TYPE)
+    initFeatureType(options)
+    init(featureType, options)
 
-    val featureType = SimpleFeatureTypes.createType(this.getClass.getCanonicalName, simpleFeatureTypeSpec)
-    featureType.decodeUserData(options, GEOMESA_ITERATORS_SIMPLE_FEATURE_TYPE)
+    this.source = source.deepCopy(env)
+  }
 
-    indexEncoder = IndexValueEncoder(featureType)
+  override def hasTop = topKey.isDefined
 
-    dateAttributeName = getDtgFieldName(featureType)
+  override def getTopKey = topKey.orNull
 
-    // default to text if not found for backwards compatibility
-    val encodingOpt = Option(options.get(FEATURE_ENCODING)).getOrElse(FeatureEncoding.TEXT.toString)
-    featureEncoder = SimpleFeatureEncoder(featureType, encodingOpt)
+  override def getTopValue = topValue.orNull
 
-    featureBuilder = AvroSimpleFeatureFactory.featureBuilder(featureType)
-
-    if (options.containsKey(DEFAULT_FILTER_PROPERTY_NAME)) {
-      val filterString  = options.get(DEFAULT_FILTER_PROPERTY_NAME)
-      filter = ECQL.toFilter(filterString)
-      val sfb = new SimpleFeatureBuilder(featureType)
-      testSimpleFeature = sfb.buildFeature("test")
-    }
-
-    if (options.containsKey(DEFAULT_CACHE_SIZE_NAME))
-      maxInMemoryIdCacheEntries = options.get(DEFAULT_CACHE_SIZE_NAME).toInt
-    deduplicate = IndexSchema.mayContainDuplicates(featureType)
-
-    this.indexSource = source.deepCopy(env)
+  /**
+   * Seeks to the start of a range and fetches the top key/value
+   *
+   * @param range
+   * @param columnFamilies
+   * @param inclusive
+   */
+  override def seek(range: Range, columnFamilies: java.util.Collection[ByteSequence], inclusive: Boolean) {
+    // move the source iterator to the right starting spot
+    profile(source.seek(range, columnFamilies, inclusive), "source.seek")
+    findTop()
   }
 
   /**
-   * Generates from the key's value a SimpleFeature that matches the current
-   * (top) reference of the index-iterator.
-   *
-   * We emit the top-key from the index-iterator, and the top-value from the
-   * converted key value.  This is *IMPORTANT*, as otherwise we do not emit rows
-   * that honor the SortedKeyValueIterator expectation, and Bad Things Happen.
+   * Reads the next qualifying key/value
    */
-  override def seekData(decodedValue: DecodedIndexValue) {
-    // now increment the value of nextKey, copy because reusing it is UNSAFE
-    nextKey = new Key(indexSource.getTopKey)
-    // using the already decoded index value, generate a SimpleFeature and set as the Value
-    val nextSimpleFeature = IndexIterator.encodeIndexValueToSF(featureBuilder, decodedValue)
-    nextValue = new Value(featureEncoder.encode(nextSimpleFeature))
+  override def next() = findTop()
+
+  /**
+   * Advances the index-iterator to the next qualifying entry
+   */
+  def findTop() {
+
+    // clear out the reference to the last entry
+    topKey = None
+    topValue = None
+
+    // loop while there is more data and we haven't matched our filter
+    while (topValue.isEmpty && profile(source.hasTop, "source.hasTop")) {
+
+      val indexKey = profile(source.getTopKey, "source.getTopKey")
+
+      if (SpatioTemporalTable.isIndexEntry(indexKey)) { // if this is a data entry, skip it
+      // the value contains the full-resolution geometry and time plus feature ID
+      val decodedValue = profile(indexEncoder.decode(source.getTopValue.get), "decodeIndexValue")
+
+        // evaluate the filter checks, in least to most expensive order
+        val meetsIndexFilters = profile(checkUniqueId.forall(fn => fn(decodedValue.id)), "checkUniqueId") &&
+            profile(stFilter.forall(fn => fn(decodedValue.geom, decodedValue.date.map(_.getTime))), "stFilter")
+
+        if (meetsIndexFilters) { // we hit a valid geometry, date and id
+        val transformedFeature =
+          profile(encodeIndexValueToSF(decodedValue), "encodeIndexValueToSF")
+          // update the key and value
+          // copy the key because reusing it is UNSAFE
+          topKey = Some(indexKey)
+          topValue = profile(transform.map(fn => new Value(fn(transformedFeature))), "transform")
+              .orElse(Some(new Value(profile(featureEncoder.encode(transformedFeature), "featureEncoder.encode"))))
+        }
+      }
+
+      // increment the underlying iterator
+      profile(source.next(), "source.next")
+    }
   }
 
   override def deepCopy(env: IteratorEnvironment) =
@@ -104,29 +128,6 @@ class IndexIterator extends SpatioTemporalIntersectingIterator with SortedKeyVal
 
 object IndexIterator {
 
-  import org.locationtech.geomesa.core.index.IndexValueEncoder.ID_FIELD
-
-  /**
-   * Converts values taken from the Index Value to a SimpleFeature, using the passed SimpleFeatureBuilder
-   * Note that the ID, taken from the index, is preserved
-   * Also note that the SimpleFeature's other attributes may not be fully parsed and may be left as null;
-   * the SimpleFeatureFilteringIterator *may* remove the extraneous attributes later in the Iterator stack
-   */
-  def encodeIndexValueToSF(featureBuilder: SimpleFeatureBuilder, value: DecodedIndexValue): SimpleFeature = {
-    // Build and fill the Feature. This offers some performance gain over building and then setting the attributes.
-    featureBuilder.buildFeature(value.id, attributeArray(featureBuilder.getFeatureType, value))
-  }
-
-  /**
-   * Construct and fill an array of the SimpleFeature's attribute values
-   */
-  def attributeArray(sft: SimpleFeatureType, indexValue: DecodedIndexValue): Array[AnyRef] = {
-    val attrArray = new Array[AnyRef](sft.getAttributeCount)
-    indexValue.attributes.foreach { case (name, value) =>
-      if (name != ID_FIELD) {
-        attrArray.update(sft.indexOf(name), value.asInstanceOf[AnyRef])
-      }
-    }
-    attrArray
-  }
+  implicit val timings: Timings = new AutoLoggingTimings()
+  implicit val noOpTimings: Timings = new NoOpTimings()
 }
