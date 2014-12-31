@@ -30,7 +30,7 @@ object Runner extends Logging {
     val tableConf = new TableConfCommand(jc)
     val listCom   = new ListCommand(jc)
     val export    = new ExportCommand(jc)
-    val delete    = new DeleteCommand(jc)
+    val delete    = new DeleteFeatureCommand(jc)
     val describe  = new DescribeCommand(jc)
     val ingest    = new IngestCommand(jc)
     val create    = new CreateCommand(jc)
@@ -51,7 +51,7 @@ object Runner extends Logging {
         case TableConfCommand.Command => tableConf
         case ListCommand.Command      => listCom
         case ExportCommand.Command    => export
-        case DeleteCommand.Command    => delete
+        case DeleteFeatureCommand.Command    => delete
         case DescribeCommand.Command  => describe
         case IngestCommand.Command    => ingest
         case CreateCommand.Command    => create

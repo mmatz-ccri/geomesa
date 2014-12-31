@@ -15,12 +15,14 @@
  */
 package org.locationtech.geomesa.tools.commands
 
+import java.util.regex.Pattern
+
 import com.beust.jcommander.{JCommander, Parameter, Parameters}
 import com.typesafe.scalalogging.slf4j.Logging
 import org.locationtech.geomesa.tools.DataStoreHelper
-import org.locationtech.geomesa.tools.commands.DeleteCommand._
+import org.locationtech.geomesa.tools.commands.DeleteFeatureCommand._
 
-class DeleteCommand(parent: JCommander) extends Command with Logging {
+class DeleteFeatureCommand(parent: JCommander) extends Command with Logging {
 
   val params = new DeleteParams
   parent.addCommand(Command, params)
@@ -52,8 +54,8 @@ class DeleteCommand(parent: JCommander) extends Command with Logging {
 
 }
 
-object DeleteCommand {
-  val Command = "delete"
+object DeleteFeatureCommand {
+  val Command = "deletefeature"
 
   def promptConfirm(feature: String, catalog: String) =
     if (System.console() != null) {
@@ -68,5 +70,10 @@ object DeleteCommand {
   class DeleteParams extends FeatureParams {
     @Parameter(names = Array("-f", "--force"), description = "Force deletion of feature without prompt", required = false)
     var forceDelete: Boolean = false
+
+    @Parameter(names = Array("-p", "--pattern"), description = "Regular expression for the features to delete", required = false)
+    var pattern: Pattern = null
   }
+
+
 }
