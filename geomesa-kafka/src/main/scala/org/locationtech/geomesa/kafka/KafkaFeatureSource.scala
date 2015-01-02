@@ -3,21 +3,20 @@ package org.locationtech.geomesa.kafka
 import java.util.Properties
 import java.util.concurrent.Executors
 
-import com.google.common.collect._
 import com.google.common.eventbus.{EventBus, Subscribe}
 import com.vividsolutions.jts.geom.{Envelope, Geometry}
 import com.vividsolutions.jts.index.quadtree.Quadtree
 import kafka.consumer.{Consumer, ConsumerConfig, Whitelist}
+import kafka.serializer.DefaultDecoder
 import org.geotools.data.collection.DelegateFeatureReader
 import org.geotools.data.store.{ContentEntry, ContentFeatureStore}
-import org.geotools.data.{FeatureReader, FeatureWriter, Query}
+import org.geotools.data.{DataUtilities, FeatureReader, FeatureWriter, Query}
 import org.geotools.feature.FeatureCollection
 import org.geotools.feature.collection.DelegateFeatureIterator
 import org.geotools.filter.identity.FeatureIdImpl
 import org.geotools.geometry.jts.{JTS, ReferencedEnvelope}
 import org.geotools.referencing.crs.DefaultGeographicCRS
-import org.joda.time.DateTime
-import org.locationtech.geomesa.feature.AvroSimpleFeature
+import org.locationtech.geomesa.feature.{AvroFeatureDecoder, AvroSimpleFeature}
 import org.locationtech.geomesa.utils.geotools.Conversions._
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 import org.opengis.filter.IncludeFilter
@@ -31,29 +30,15 @@ import scala.collection.mutable
 class KafkaFeatureSource(entry: ContentEntry,
                          schema: SimpleFeatureType,
                          eb: EventBus,
-                         producer: FeatureProducer,
-                         zookeepers: String,
-                         groupId: String,
-                         exp: Long,
+                         producer: KafkaFeatureConsumer,
                          query: Query)
   extends ContentFeatureStore(entry, query) {
 
   type FR = FeatureReader[SimpleFeatureType, SimpleFeature]
   val qt = new Quadtree
-  val features = Queues.newConcurrentLinkedQueue[FeatureHolder]()
+  val features = scala.collection.mutable.Buffer.empty[SimpleFeature]
 
   eb.register(this)
-
-  case class FeatureHolder(l: Long, sf: SimpleFeature)
-
-  def flush(cutoff: Long): Unit = {
-    var e = features.peek()
-    while(e != null && e.l < cutoff) {
-      features.poll()
-      qt.remove(e.sf.point.getEnvelopeInternal, e.sf)
-      e = features.peek()
-    }
-  }
 
   @Subscribe
   def processNewFeatures(coll: FeatureCollection[SimpleFeatureType, SimpleFeature]): Unit =
@@ -78,7 +63,7 @@ class KafkaFeatureSource(entry: ContentEntry,
 
   type DFR = DelegateFeatureReader[SimpleFeatureType, SimpleFeature]
   type DFI = DelegateFeatureIterator[SimpleFeature]
-  def include(i: IncludeFilter) = new DFR(schema, new DFI(features.toArray.map(_.asInstanceOf[FeatureHolder].sf).iterator))
+  def include(i: IncludeFilter) = new DFR(schema, new DFI(features.iterator))
 
   def within(w: Within): FR = {
     val (_, geomLit) = splitBinOp(w)
@@ -112,7 +97,7 @@ class KafkaFeatureSource(entry: ContentEntry,
   override def getWriterInternal(query: Query, flags: Int): FeatureWriter[SimpleFeatureType, SimpleFeature] =
     new FeatureWriter[SimpleFeatureType, SimpleFeature] {
       var sf: SimpleFeature = null
-      var saved = mutable.Buffer.empty[FeatureHolder]
+      var saved = mutable.Buffer.empty[SimpleFeature]
       override def getFeatureType: SimpleFeatureType = schema
       override def next(): SimpleFeature = {
         if(sf != null) write()
@@ -122,14 +107,14 @@ class KafkaFeatureSource(entry: ContentEntry,
       override def remove(): Unit = ???
       override def hasNext: Boolean = false
       override def write(): Unit = {
-        if(sf != null) saved += FeatureHolder(DateTime.now().getMillis, sf)
+        if(sf != null) saved += sf
         sf = null
       }
       override def close(): Unit = {
         // write out all the features
-        saved.foreach { fh =>
-          qt.insert(fh.sf.point.getEnvelopeInternal, fh.sf)
-          features.add(fh)
+        saved.foreach { sf =>
+          qt.insert(sf.point.getEnvelopeInternal, sf)
+          features.add(sf)
         }
       }
     }
@@ -143,19 +128,27 @@ trait FeatureProducer {
 
 class KafkaFeatureConsumer(topic: String, 
                            zookeepers: String, 
-                           groupId: String, 
+                           groupId: String,
+                           featureDecoder: AvroFeatureDecoder,
                            override val eventBus: EventBus) extends FeatureProducer {
-  val client = Consumer.create(new ConsumerConfig(buildClientProps))
-  val whiteList = new Whitelist(topic)
-  val stream = client.createMessageStreamsByFilter(whiteList).head
+
+  private val client = Consumer.create(new ConsumerConfig(buildClientProps))
+  private val whiteList = new Whitelist(topic)
+  private val decoder: DefaultDecoder = new DefaultDecoder(null)
+  private val stream =
+    client.createMessageStreamsByFilter(whiteList, 1, decoder, decoder).head
 
   val es = Executors.newSingleThreadExecutor()
   es.submit(new Runnable {
     override def run(): Unit = {
-
+      val iter = stream.iterator()
+      while (iter.hasNext) {
+        val msg = iter.next()
+        val f: SimpleFeature = featureDecoder.decode(msg.message())
+        produceFeatures(DataUtilities.collection(f))
+      }
     }
   })
-
 
   private def buildClientProps = {
     val props = new Properties()

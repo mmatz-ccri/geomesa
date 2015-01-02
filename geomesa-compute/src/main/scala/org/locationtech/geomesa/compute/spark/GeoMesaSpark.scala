@@ -33,7 +33,7 @@ import org.geotools.data.{DataStore, Query}
 import org.geotools.factory.CommonFactoryFinder
 import org.locationtech.geomesa.core.data._
 import org.locationtech.geomesa.core.index.{IndexSchema, STIdxStrategy}
-import org.locationtech.geomesa.feature.AvroSimpleFeature
+import org.locationtech.geomesa.feature.{AvroFeatureDecoder, AvroFeatureEncoder, SimpleFeatureEncoder, AvroSimpleFeature}
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 

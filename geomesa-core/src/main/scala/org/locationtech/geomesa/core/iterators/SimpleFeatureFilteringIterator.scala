@@ -23,6 +23,7 @@ import org.apache.accumulo.core.iterators.{IteratorEnvironment, SortedKeyValueIt
 import org.geotools.filter.text.ecql.ECQL
 import org.locationtech.geomesa.core.data._
 import org.locationtech.geomesa.core.transform.TransformCreator
+import org.locationtech.geomesa.feature.{FeatureEncoding, SimpleFeatureDecoder}
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 import org.opengis.filter.Filter
