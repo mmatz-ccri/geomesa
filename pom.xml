@@ -35,6 +35,7 @@
         <module>geomesa-compute</module>
         <module>geomesa-assemble</module>
         <module>geomesa-web</module>
+        <module>geomesa-kafka</module>
     </modules>
 
     <properties>
@@ -900,7 +901,7 @@
                 <configuration>
                     <jvmArgs>
                         <jvmArg>-Xms1024m</jvmArg>
-                        <jvmArg>-Xmx4096m</jvmArg>
+                        <jvmArg>-Xmx8G</jvmArg>
                         <jvmArg>-XX:MaxPermSize=1024m</jvmArg>
                     </jvmArgs>
                     <args>
