@@ -39,18 +39,21 @@ class KafkaDataStore(broker: String, zookeepers: String, isProducer: Boolean)
     val topic = featureType.getTypeName
     if(getTypeNames.contains(topic)) throw new IllegalArgumentException(s"Typename already taken")
     else {
-      //AdminUtils.createTopic(zkClient, topic, 1, 1, new Properties())
-      val props = new Properties()
-      props.put("metadata.broker.list", broker)
-      props.put("serializer.class", "kafka.serializer.DefaultEncoder")
-      props.put("request.required.acks", "1")
-      props.put("producer.type", "sync")
-      val kafkaProducer = new Producer[Array[Byte], Array[Byte]](new ProducerConfig(props))
       val encodedSchema = SimpleFeatureTypes.encodeType(featureType).getBytes(StandardCharsets.UTF_8)
       val schemaMsg = new KeyedMessage[Array[Byte], Array[Byte]](topic, schemaKey, encodedSchema)
+      val kafkaProducer = getKafkaProducer
       kafkaProducer.send(schemaMsg)
       kafkaProducer.close()
     }
+  }
+
+  private def getKafkaProducer: Producer[Array[Byte], Array[Byte]] = {
+    val props = new Properties()
+    props.put("metadata.broker.list", broker)
+    props.put("serializer.class", "kafka.serializer.DefaultEncoder")
+    props.put("request.required.acks", "1")
+    props.put("producer.type", "sync")
+    new Producer[Array[Byte], Array[Byte]](new ProducerConfig(props))
   }
 
   override def createFeatureSource(entry: ContentEntry) =

@@ -10,8 +10,7 @@ import kafka.consumer.{Consumer, ConsumerConfig, Whitelist}
 import kafka.serializer.DefaultDecoder
 import org.geotools.data.collection.DelegateFeatureReader
 import org.geotools.data.store.{ContentEntry, ContentFeatureStore}
-import org.geotools.data.{DataUtilities, FeatureReader, Query}
-import org.geotools.feature.FeatureCollection
+import org.geotools.data.{FeatureReader, Query}
 import org.geotools.feature.collection.DelegateFeatureIterator
 import org.geotools.filter.identity.FeatureIdImpl
 import org.geotools.geometry.jts.{JTS, ReferencedEnvelope}
@@ -35,17 +34,19 @@ class KafkaConsumerFeatureSource(entry: ContentEntry,
 
   type FR = FeatureReader[SimpleFeatureType, SimpleFeature]
   val qt = new Quadtree
-  val features = scala.collection.mutable.Buffer.empty[SimpleFeature]
+  val features = scala.collection.mutable.HashMap.empty[String, SimpleFeature]
 
   eb.register(this)
 
   @Subscribe
-  def processNewFeatures(coll: FeatureCollection[SimpleFeatureType, SimpleFeature]): Unit = {
-    val iter = coll.features()
-    while(iter.hasNext) {
-      val sf = iter.next()
-      qt.insert(sf.point.getEnvelopeInternal, sf)
-      features.add(sf)
+  def processNewFeatures(sf: SimpleFeature): Unit = {
+    qt.insert(sf.point.getEnvelopeInternal, sf)
+    features.add(sf.getID, sf)
+  }
+
+  def removeFeature(id: String): Unit = {
+    features.remove(id).foreach { sf =>
+      qt.remove(sf.point.getEnvelopeInternal, null)
     }
   }
 
@@ -66,7 +67,7 @@ class KafkaConsumerFeatureSource(entry: ContentEntry,
 
   type DFR = DelegateFeatureReader[SimpleFeatureType, SimpleFeature]
   type DFI = DelegateFeatureIterator[SimpleFeature]
-  def include(i: IncludeFilter) = new DFR(schema, new DFI(features.iterator))
+  def include(i: IncludeFilter) = new DFR(schema, new DFI(features.values.iterator))
 
   def within(w: Within): FR = {
     val (_, geomLit) = splitBinOp(w)
@@ -102,8 +103,7 @@ class KafkaConsumerFeatureSource(entry: ContentEntry,
 
 trait FeatureProducer {
   def eventBus: EventBus
-  def produceFeatures(coll: FeatureCollection[SimpleFeatureType, SimpleFeature]): Unit =
-    eventBus.post(coll)
+  def produceFeatures(f: SimpleFeature): Unit = eventBus.post(f)
 }
 
 class KafkaFeatureConsumer(topic: String, 
@@ -124,8 +124,8 @@ class KafkaFeatureConsumer(topic: String,
       val iter = stream.iterator()
       while (iter.hasNext) {
         val msg = iter.next()
-        val f: SimpleFeature = featureDecoder.decode(msg.message())
-        produceFeatures(DataUtilities.collection(f))
+        val f = featureDecoder.decode(msg.message())
+        produceFeatures(f)
       }
     }
   })
