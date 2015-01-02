@@ -47,7 +47,7 @@ class KafkaDataStore(broker: String, zookeepers: String)
     val topic = featureType.getTypeName
     if(getTypeNames.contains(topic)) throw new IllegalArgumentException(s"Typename already taken")
     else {
-      AdminUtils.createTopic(zkClient, topic, 1, 1, new Properties())
+      //AdminUtils.createTopic(zkClient, topic, 1, 1, new Properties())
       val props = new Properties()
       props.put("metadata.broker.list", broker)
       props.put("serializer.class", "kafka.serializer.DefaultEncoder")
