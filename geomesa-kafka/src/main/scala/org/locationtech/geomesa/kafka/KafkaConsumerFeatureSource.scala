@@ -10,13 +10,13 @@ import kafka.consumer.{Consumer, ConsumerConfig, Whitelist}
 import kafka.serializer.DefaultDecoder
 import org.geotools.data.collection.DelegateFeatureReader
 import org.geotools.data.store.{ContentEntry, ContentFeatureStore}
-import org.geotools.data.{DataUtilities, FeatureReader, FeatureWriter, Query}
+import org.geotools.data.{DataUtilities, FeatureReader, Query}
 import org.geotools.feature.FeatureCollection
 import org.geotools.feature.collection.DelegateFeatureIterator
 import org.geotools.filter.identity.FeatureIdImpl
 import org.geotools.geometry.jts.{JTS, ReferencedEnvelope}
 import org.geotools.referencing.crs.DefaultGeographicCRS
-import org.locationtech.geomesa.feature.{AvroFeatureDecoder, AvroSimpleFeature}
+import org.locationtech.geomesa.feature.AvroFeatureDecoder
 import org.locationtech.geomesa.utils.geotools.Conversions._
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 import org.opengis.filter.IncludeFilter
@@ -25,13 +25,12 @@ import org.opengis.filter.identity.FeatureId
 import org.opengis.filter.spatial.{BBOX, BinarySpatialOperator, Within}
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable
 
-class KafkaFeatureSource(entry: ContentEntry,
-                         schema: SimpleFeatureType,
-                         eb: EventBus,
-                         producer: KafkaFeatureConsumer,
-                         query: Query)
+class KafkaConsumerFeatureSource(entry: ContentEntry,
+                                 schema: SimpleFeatureType,
+                                 eb: EventBus,
+                                 producer: KafkaFeatureConsumer,
+                                 query: Query)
   extends ContentFeatureStore(entry, query) {
 
   type FR = FeatureReader[SimpleFeatureType, SimpleFeature]
@@ -41,9 +40,14 @@ class KafkaFeatureSource(entry: ContentEntry,
   eb.register(this)
 
   @Subscribe
-  def processNewFeatures(coll: FeatureCollection[SimpleFeatureType, SimpleFeature]): Unit =
-    addFeatures(coll)
-
+  def processNewFeatures(coll: FeatureCollection[SimpleFeatureType, SimpleFeature]): Unit = {
+    val iter = coll.features()
+    while(iter.hasNext) {
+      val sf = iter.next()
+      qt.insert(sf.point.getEnvelopeInternal, sf)
+      features.add(sf)
+    }
+  }
 
   override def getBoundsInternal(query: Query) =
     ReferencedEnvelope.create(new Envelope(-180, 180, -90, 90), DefaultGeographicCRS.WGS84)
@@ -59,7 +63,6 @@ class KafkaFeatureSource(entry: ContentEntry,
       case w: Within        => within(w)
       case b: BBOX          => bbox(b)
     }
-
 
   type DFR = DelegateFeatureReader[SimpleFeatureType, SimpleFeature]
   type DFI = DelegateFeatureIterator[SimpleFeature]
@@ -94,30 +97,7 @@ class KafkaFeatureSource(entry: ContentEntry,
     new FeatureIdImpl(ret.toString)
   }
 
-  override def getWriterInternal(query: Query, flags: Int): FeatureWriter[SimpleFeatureType, SimpleFeature] =
-    new FeatureWriter[SimpleFeatureType, SimpleFeature] {
-      var sf: SimpleFeature = null
-      var saved = mutable.Buffer.empty[SimpleFeature]
-      override def getFeatureType: SimpleFeatureType = schema
-      override def next(): SimpleFeature = {
-        if(sf != null) write()
-        sf = new AvroSimpleFeature(getNextId, schema)
-        sf
-      }
-      override def remove(): Unit = ???
-      override def hasNext: Boolean = false
-      override def write(): Unit = {
-        if(sf != null) saved += sf
-        sf = null
-      }
-      override def close(): Unit = {
-        // write out all the features
-        saved.foreach { sf =>
-          qt.insert(sf.point.getEnvelopeInternal, sf)
-          features.add(sf)
-        }
-      }
-    }
+  override def getWriterInternal(query: Query, flags: Int) = throw new IllegalArgumentException("Not allowed")
 }
 
 trait FeatureProducer {

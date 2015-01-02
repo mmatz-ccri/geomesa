@@ -7,33 +7,25 @@ import java.{util => ju}
 
 import com.google.common.cache.{CacheBuilder, CacheLoader}
 import com.google.common.eventbus.EventBus
-import kafka.admin.AdminUtils
 import kafka.consumer.{Consumer, ConsumerConfig, Whitelist}
 import kafka.message.MessageAndMetadata
-import kafka.producer.{KeyedMessage, ProducerConfig, Producer}
-import kafka.serializer.{DefaultDecoder, StringDecoder}
+import kafka.producer.{KeyedMessage, Producer, ProducerConfig}
+import kafka.serializer.DefaultDecoder
 import kafka.utils.ZkUtils
 import org.I0Itec.zkclient.ZkClient
 import org.apache.commons.lang3.RandomStringUtils
 import org.geotools.data.DataAccessFactory.Param
-import org.geotools.data.store.{ContentDataStore, ContentEntry}
-import org.geotools.data.{FeatureWriter, Transaction, AbstractDataStoreFactory, DataStore}
+import org.geotools.data.store.{ContentDataStore, ContentEntry, ContentFeatureSource}
+import org.geotools.data.{AbstractDataStoreFactory, DataStore}
 import org.geotools.feature.NameImpl
-import org.geotools.filter.identity.FeatureIdImpl
-import org.locationtech.geomesa.feature.{AvroFeatureEncoder, AvroSimpleFeature, AvroFeatureDecoder}
+import org.locationtech.geomesa.feature.AvroFeatureDecoder
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.opengis.feature.`type`.Name
-import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
-import org.opengis.filter.Filter
-import org.opengis.filter.identity.FeatureId
+import org.opengis.feature.simple.SimpleFeatureType
 
-import scala.util.Try
-
-class KafkaDataStore(broker: String, zookeepers: String)
+class KafkaDataStore(broker: String, zookeepers: String, isProducer: Boolean)
   extends ContentDataStore {
   import scala.collection.JavaConverters._
-
-  type FW = FeatureWriter[SimpleFeatureType, SimpleFeature]
 
   private val groupId = RandomStringUtils.randomAlphanumeric(5)
   val zkClient = new ZkClient(zookeepers)
@@ -62,7 +54,14 @@ class KafkaDataStore(broker: String, zookeepers: String)
   }
 
   override def createFeatureSource(entry: ContentEntry) =
-    if(createTypeNames().contains(entry.getName)) {
+    if(isProducer) createProducerFeatureSource(entry)
+    else createConsumerFeatureSource(entry)
+
+  def createProducerFeatureSource(entry: ContentEntry): ContentFeatureSource =
+    new KafkaProducerFeatureStore(entry, schemaCache.get(entry.getTypeName), broker, null)
+
+  def createConsumerFeatureSource(entry: ContentEntry): ContentFeatureSource = {
+    if (createTypeNames().contains(entry.getName)) {
       val topic = entry.getTypeName
       val eb = new EventBus(topic)
       val sft = schemaCache.get(topic)
@@ -70,8 +69,9 @@ class KafkaDataStore(broker: String, zookeepers: String)
       val decoder = new AvroFeatureDecoder(sft)
       val producer =
         new KafkaFeatureConsumer(topic, zookeepers, groupId, decoder, eb)
-      new KafkaFeatureSource(entry, sft, eb, producer, null)
+      new KafkaConsumerFeatureSource(entry, sft, eb, producer, null)
     } else null
+  }
 
   val schemaCache =
     CacheBuilder.newBuilder().build(new CacheLoader[String, SimpleFeatureType] {
@@ -105,46 +105,19 @@ class KafkaDataStore(broker: String, zookeepers: String)
     props
   }
 
-  override def getFeatureWriter(typeName: String, filter: Filter, tx: Transaction): FW = {
-    new FW {
-      val schema = schemaCache.get(typeName)
-      val encoder = new AvroFeatureEncoder(schema)
-      val props = new Properties()
-      props.put("metadata.broker.list", broker)
-      props.put("serializer.class", "kafka.serializer.DefaultEncoder")
-      val kafkaProducer = new Producer[String, Array[Byte]](new ProducerConfig(props))
-
-      var sf: SimpleFeature = null
-      private var id = 1L
-      def getNextId: FeatureId = {
-        val ret = id
-        id += 1
-        new FeatureIdImpl(ret.toString)
-      }
-      override def getFeatureType: SimpleFeatureType = schema
-      override def next(): SimpleFeature = new AvroSimpleFeature(getNextId, schema)
-      override def remove(): Unit = {}
-      override def hasNext: Boolean = false
-      override def write(): Unit = {
-        val encoded = encoder.encode(sf)
-        val msg = new KeyedMessage[String, Array[Byte]](typeName, encoded)
-        sf = null
-        kafkaProducer.send(msg)
-      }
-      override def close(): Unit = {}
-    }
-  }
 }
 
 class KafkaDataStoreFactory extends AbstractDataStoreFactory {
 
   val KAFKA_BROKER_PARAM = new Param("broker", classOf[String], "Kafka broker", true)
   val ZOOKEEPERS_PARAM   = new Param("zookeepers", classOf[String], "Zookeepers", true)
+  val IS_PRODUCER_PARAM  = new Param("isProducer", classOf[java.lang.Boolean], "Is Producer", true)
 
   override def createDataStore(params: ju.Map[String, Serializable]): DataStore = {
-    val broker = KAFKA_BROKER_PARAM.lookUp(params).asInstanceOf[String]
-    val zk     = ZOOKEEPERS_PARAM.lookUp(params).asInstanceOf[String]
-    new KafkaDataStore(broker, zk)
+    val broker   = KAFKA_BROKER_PARAM.lookUp(params).asInstanceOf[String]
+    val zk       = ZOOKEEPERS_PARAM.lookUp(params).asInstanceOf[String]
+    val producer = IS_PRODUCER_PARAM.lookUp(params).asInstanceOf[java.lang.Boolean]
+    new KafkaDataStore(broker, zk, producer)
   }
 
   override def createNewDataStore(params: ju.Map[String, Serializable]): DataStore = ???
