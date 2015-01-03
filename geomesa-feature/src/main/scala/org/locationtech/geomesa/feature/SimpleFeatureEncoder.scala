@@ -18,7 +18,6 @@ package org.locationtech.geomesa.feature
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream}
 
-import org.apache.accumulo.core.data.{Value => AValue}
 import org.apache.avro.io._
 import org.geotools.data.DataUtilities
 import org.locationtech.geomesa.feature.FeatureEncoding.FeatureEncoding
@@ -53,9 +52,7 @@ trait SimpleFeatureEncoder extends HasEncoding {
  * as instance variables for performance reasons.
  */
 trait SimpleFeatureDecoder extends HasEncoding {
-  def decode(featureValue: AValue): SimpleFeature = decode(featureValue.get)
   def decode(featureBytes: Array[Byte]): SimpleFeature
-  def extractFeatureId(value: AValue): String = extractFeatureId(value.get)
   def extractFeatureId(bytes: Array[Byte]): String
 }
 

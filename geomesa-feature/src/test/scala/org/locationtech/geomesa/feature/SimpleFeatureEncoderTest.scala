@@ -17,7 +17,6 @@
 package org.locationtech.geomesa.feature
 
 import com.vividsolutions.jts.geom.Point
-import org.apache.accumulo.core.data.Value
 import org.geotools.factory.Hints
 import org.junit.runner.RunWith
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
@@ -54,7 +53,7 @@ class SimpleFeatureEncoderTest extends Specification {
 
       val features = getFeatures
       val encoded = features.map(encoder.encode(_))
-      val decoded = encoded.map { bytes => decoder.decode(new Value(bytes)) }
+      val decoded = encoded.map { bytes => decoder.decode(bytes) }
       decoded.map(_.getDefaultGeometry) mustEqual(features.map(_.getDefaultGeometry))
     }
 

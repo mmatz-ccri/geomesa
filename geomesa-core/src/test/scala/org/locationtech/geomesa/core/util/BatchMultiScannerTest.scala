@@ -111,7 +111,7 @@ class BatchMultiScannerTest extends Specification {
     val decoder = SimpleFeatureDecoder(sft, "avro")
     val retrieved = bms.iterator.toList
     retrieved.foreach { e =>
-      val sf = decoder.decode(e.getValue)
+      val sf = decoder.decode(e.getValue.get())
       if (value != AttributeTable.nullString) {
         sf.getAttribute(attr) mustEqual value
       }

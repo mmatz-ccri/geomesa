@@ -1,5 +1,7 @@
 package org.locationtech.geomesa.kafka
 
+import java.nio.charset.StandardCharsets
+import java.util
 import java.util.Properties
 import java.util.concurrent.Executors
 
@@ -41,9 +43,10 @@ class KafkaConsumerFeatureSource(entry: ContentEntry,
   @Subscribe
   def processNewFeatures(sf: SimpleFeature): Unit = {
     qt.insert(sf.point.getEnvelopeInternal, sf)
-    features.add(sf.getID, sf)
+    features.put(sf.getID, sf)
   }
 
+  @Subscribe
   def removeFeature(id: String): Unit = {
     features.remove(id).foreach { sf =>
       qt.remove(sf.point.getEnvelopeInternal, null)
@@ -104,6 +107,8 @@ class KafkaConsumerFeatureSource(entry: ContentEntry,
 trait FeatureProducer {
   def eventBus: EventBus
   def produceFeatures(f: SimpleFeature): Unit = eventBus.post(f)
+  def deleteFeature(id: String): Unit = eventBus.post(id)
+  def deleteFeatures(ids: Seq[String]): Unit = ids.foreach(deleteFeature)
 }
 
 class KafkaFeatureConsumer(topic: String, 
@@ -124,8 +129,13 @@ class KafkaFeatureConsumer(topic: String,
       val iter = stream.iterator()
       while (iter.hasNext) {
         val msg = iter.next()
-        val f = featureDecoder.decode(msg.message())
-        produceFeatures(f)
+        if(msg.key() != null && util.Arrays.equals(msg.key(), KafkaProducerFeatureStore.DELETE_KEY)) {
+          val id = new String(msg.message(), StandardCharsets.UTF_8)
+          deleteFeature(id)
+        } else {
+          val f = featureDecoder.decode(msg.message())
+          produceFeatures(f)
+        }
       }
     }
   })

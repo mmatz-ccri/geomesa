@@ -56,7 +56,7 @@ class SimpleFeatureFilteringIterator(other: SimpleFeatureFilteringIterator, env:
   var transform: (SimpleFeature => Array[Byte]) = (_: SimpleFeature) => source.getTopValue.get()
 
   def evalFilter(v: Value) = {
-    Try(sourceDecoder.decode(v)) match {
+    Try(sourceDecoder.decode(v.get())) match {
       case Success(feature) =>
         nextFeature = feature
         filter.evaluate(nextFeature)

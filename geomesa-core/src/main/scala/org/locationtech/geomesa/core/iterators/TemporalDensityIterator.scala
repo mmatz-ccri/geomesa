@@ -103,7 +103,7 @@ class TemporalDensityIterator(other: TemporalDensityIterator, env: IteratorEnvir
       topSourceKey = source.getTopKey
       topSourceValue = source.getTopValue //SimpleFeature
 
-      val date = originalDecoder.decode(topSourceValue).getAttribute(dateTimeFieldName).asInstanceOf[Date]
+      val date = originalDecoder.decode(topSourceValue.get()).getAttribute(dateTimeFieldName).asInstanceOf[Date]
       val dateTime = new DateTime(date.getTime)
       addResultDate(dateTime)
 

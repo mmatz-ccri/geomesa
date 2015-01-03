@@ -110,7 +110,7 @@ class DensityIterator(other: DensityIterator, env: IteratorEnvironment) extends 
       topSourceKey = source.getTopKey
       topSourceValue = source.getTopValue
 
-      val feature = originalDecoder.decode(topSourceValue)
+      val feature = originalDecoder.decode(topSourceValue.get())
       lazy val geoHashGeom = decoder.decode(topSourceKey).getDefaultGeometry.asInstanceOf[Geometry]
       geometry = feature.getDefaultGeometry.asInstanceOf[Geometry]
       geometry match {

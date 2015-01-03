@@ -17,6 +17,10 @@ import org.opengis.filter.identity.FeatureId
 
 import scala.collection.JavaConversions._
 
+object KafkaProducerFeatureStore {
+  val DELETE_KEY = "delete".getBytes(StandardCharsets.UTF_8)
+}
+
 class KafkaProducerFeatureStore(entry: ContentEntry,
                                 schema: SimpleFeatureType,
                                 broker: String,
@@ -32,11 +36,10 @@ class KafkaProducerFeatureStore(entry: ContentEntry,
 
   type FW = FeatureWriter[SimpleFeatureType, SimpleFeature]
 
-
   override def removeFeatures(filter: Filter): Unit = super.removeFeatures(filter)
 
   override def getWriterInternal(query: Query, flags: Int): FeatureWriter[SimpleFeatureType, SimpleFeature] =
-    if(query != null) new DeletingFeatureWriter(query)
+    if(query.getFilter != null) new DeletingFeatureWriter(query)
     else new AppendingFeatureWriter
 
   trait KafkaFeatureWriter {
@@ -44,7 +47,7 @@ class KafkaProducerFeatureStore(entry: ContentEntry,
     val props = new Properties()
     props.put("metadata.broker.list", broker)
     props.put("serializer.class", "kafka.serializer.DefaultEncoder")
-    val kafkaProducer = new Producer[String, Array[Byte]](new ProducerConfig(props))
+    val kafkaProducer = new Producer[Array[Byte], Array[Byte]](new ProducerConfig(props))
   }
 
   class AppendingFeatureWriter extends FW with KafkaFeatureWriter {
@@ -65,7 +68,7 @@ class KafkaProducerFeatureStore(entry: ContentEntry,
 
     override def write(): Unit = {
       val encoded = encoder.encode(sf)
-      val msg = new KeyedMessage[String, Array[Byte]](typeName, encoded)
+      val msg = new KeyedMessage[Array[Byte], Array[Byte]](typeName, encoded)
       sf = null
       kafkaProducer.send(msg)
     }
@@ -74,16 +77,17 @@ class KafkaProducerFeatureStore(entry: ContentEntry,
 
   class DeletingFeatureWriter(query: Query) extends FW with KafkaFeatureWriter {
     val toDelete =
-      if(query == null) Seq()
-      else query match {
+      if(query.getFilter == null) Seq()
+      else query.getFilter match {
         case ids: Id => ids.getIDs.toIndexedSeq
         case _       => Seq()
       }
     val toDeleteIter = toDelete.iterator
 
     var curDel: String = null
-    val EMPTY_SF = new AvroSimpleFeature(null, schema)
-    override def getFeatureType: SimpleFeatureType = ???
+    val EMPTY_SF = new AvroSimpleFeature(new FeatureIdImpl(""), schema)
+
+    override def getFeatureType: SimpleFeatureType = schema
 
     override def next(): SimpleFeature = {
       curDel = toDeleteIter.next().asInstanceOf[String]
@@ -91,10 +95,9 @@ class KafkaProducerFeatureStore(entry: ContentEntry,
       EMPTY_SF
     }
 
-    private val DELETE_KEY = "delete"
     override def remove(): Unit = {
       val bytes = curDel.getBytes(StandardCharsets.UTF_8)
-      val delMsg = new KeyedMessage[String, Array[Byte]](typeName, DELETE_KEY, bytes)
+      val delMsg = new KeyedMessage[Array[Byte], Array[Byte]](typeName, KafkaProducerFeatureStore.DELETE_KEY, bytes)
       kafkaProducer.send(delMsg)
     }
 
