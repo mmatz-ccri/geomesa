@@ -20,7 +20,7 @@ import org.geotools.referencing.crs.DefaultGeographicCRS
 import org.locationtech.geomesa.feature.AvroFeatureDecoder
 import org.locationtech.geomesa.utils.geotools.Conversions._
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
-import org.opengis.filter.IncludeFilter
+import org.opengis.filter.{Filter, Or, IncludeFilter}
 import org.opengis.filter.expression.{Literal, PropertyName}
 import org.opengis.filter.identity.FeatureId
 import org.opengis.filter.spatial.{BBOX, BinarySpatialOperator, Within}
@@ -49,7 +49,7 @@ class KafkaConsumerFeatureSource(entry: ContentEntry,
   @Subscribe
   def removeFeature(id: String): Unit = {
     features.remove(id).foreach { sf =>
-      qt.remove(sf.point.getEnvelopeInternal, null)
+      qt.remove(sf.point.getEnvelopeInternal, sf)
     }
   }
 
@@ -61,8 +61,11 @@ class KafkaConsumerFeatureSource(entry: ContentEntry,
   override def getCountInternal(query: Query): Int =
     getReaderInternal(query).getIterator.size
 
-  override def getReaderInternal(query: Query): FR =
-    query.getFilter match {
+  override def getReaderInternal(query: Query): FR = getReaderForFilter(query.getFilter)
+
+  def getReaderForFilter(f: Filter): FR =
+    f match {
+      case o: Or            => or(o)
       case i: IncludeFilter => include(i)
       case w: Within        => within(w)
       case b: BBOX          => bbox(b)
@@ -71,6 +74,12 @@ class KafkaConsumerFeatureSource(entry: ContentEntry,
   type DFR = DelegateFeatureReader[SimpleFeatureType, SimpleFeature]
   type DFI = DelegateFeatureIterator[SimpleFeature]
   def include(i: IncludeFilter) = new DFR(schema, new DFI(features.values.iterator))
+
+  def or(o: Or): FR = {
+    val readers = o.getChildren.map(getReaderForFilter).map(_.getIterator)
+    val composed = readers.foldLeft(Iterator[SimpleFeature]())(_ ++ _)
+    new DFR(schema, new DFI(composed))
+  }
 
   def within(w: Within): FR = {
     val (_, geomLit) = splitBinOp(w)

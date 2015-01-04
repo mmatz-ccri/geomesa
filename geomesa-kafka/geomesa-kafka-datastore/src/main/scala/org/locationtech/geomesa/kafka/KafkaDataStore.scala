@@ -1,5 +1,6 @@
 package org.locationtech.geomesa.kafka
 
+import java.awt.RenderingHints.Key
 import java.io.Serializable
 import java.nio.charset.StandardCharsets
 import java.util.Properties
@@ -16,7 +17,7 @@ import org.I0Itec.zkclient.ZkClient
 import org.apache.commons.lang3.RandomStringUtils
 import org.geotools.data.DataAccessFactory.Param
 import org.geotools.data.store.{ContentDataStore, ContentEntry, ContentFeatureSource}
-import org.geotools.data.{AbstractDataStoreFactory, DataStore}
+import org.geotools.data.{DataStore, DataStoreFactorySpi}
 import org.geotools.feature.NameImpl
 import org.locationtech.geomesa.feature.AvroFeatureDecoder
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
@@ -56,14 +57,25 @@ class KafkaDataStore(broker: String, zookeepers: String, isProducer: Boolean)
     new Producer[Array[Byte], Array[Byte]](new ProducerConfig(props))
   }
 
-  override def createFeatureSource(entry: ContentEntry) =
-    if(isProducer) createProducerFeatureSource(entry)
-    else createConsumerFeatureSource(entry)
+  val producerCache =
+    CacheBuilder.newBuilder().build[ContentEntry, ContentFeatureSource](
+      new CacheLoader[ContentEntry, ContentFeatureSource] {
+        override def load(entry: ContentEntry) = createProducerFeatureSource(entry)
+      })
+  val consumerCache =
+    CacheBuilder.newBuilder().build[ContentEntry, ContentFeatureSource](
+      new CacheLoader[ContentEntry, ContentFeatureSource] {
+        override def load(entry: ContentEntry) = createConsumerFeatureSource(entry)
+      })
 
-  def createProducerFeatureSource(entry: ContentEntry): ContentFeatureSource =
+  override def createFeatureSource(entry: ContentEntry) =
+    if(isProducer) producerCache.get(entry)
+    else consumerCache.get(entry)
+
+  private def createProducerFeatureSource(entry: ContentEntry): ContentFeatureSource =
     new KafkaProducerFeatureStore(entry, schemaCache.get(entry.getTypeName), broker, null)
 
-  def createConsumerFeatureSource(entry: ContentEntry): ContentFeatureSource = {
+  private def createConsumerFeatureSource(entry: ContentEntry): ContentFeatureSource = {
     if (createTypeNames().contains(entry.getName)) {
       val topic = entry.getTypeName
       val eb = new EventBus(topic)
@@ -110,22 +122,32 @@ class KafkaDataStore(broker: String, zookeepers: String, isProducer: Boolean)
 
 }
 
-class KafkaDataStoreFactory extends AbstractDataStoreFactory {
-
-  val KAFKA_BROKER_PARAM = new Param("broker", classOf[String], "Kafka broker", true)
+object KafkaDataStoreFactoryParams {
+  val KAFKA_BROKER_PARAM = new Param("brokers", classOf[String], "Kafka broker", true)
   val ZOOKEEPERS_PARAM   = new Param("zookeepers", classOf[String], "Zookeepers", true)
-  val IS_PRODUCER_PARAM  = new Param("isProducer", classOf[java.lang.Boolean], "Is Producer", true)
+  val IS_PRODUCER_PARAM  = new Param("isProducer", classOf[java.lang.Boolean], "Is Producer", false, false)
+}
+
+class KafkaDataStoreFactory extends DataStoreFactorySpi {
+
+  import org.locationtech.geomesa.kafka.KafkaDataStoreFactoryParams._
 
   override def createDataStore(params: ju.Map[String, Serializable]): DataStore = {
     val broker   = KAFKA_BROKER_PARAM.lookUp(params).asInstanceOf[String]
     val zk       = ZOOKEEPERS_PARAM.lookUp(params).asInstanceOf[String]
-    val producer = IS_PRODUCER_PARAM.lookUp(params).asInstanceOf[java.lang.Boolean]
+    val producer =
+      if(IS_PRODUCER_PARAM.lookUp(params) == null) java.lang.Boolean.FALSE
+      else IS_PRODUCER_PARAM.lookUp(params).asInstanceOf[java.lang.Boolean]
     new KafkaDataStore(broker, zk, producer)
   }
 
   override def createNewDataStore(params: ju.Map[String, Serializable]): DataStore = ???
-
-  override def getDescription: String = ???
-
+  override def getDescription: String = "Kafka Data Store"
   override def getParametersInfo: Array[Param] = Array(KAFKA_BROKER_PARAM, ZOOKEEPERS_PARAM)
+  override def getDisplayName: String = "Kafka Data Store"
+  override def canProcess(params: ju.Map[String, Serializable]): Boolean =
+    KAFKA_BROKER_PARAM.lookUp(params) != null && ZOOKEEPERS_PARAM.lookUp(params) != null
+
+  override def isAvailable: Boolean = true
+  override def getImplementationHints: ju.Map[Key, _] = null
 }
