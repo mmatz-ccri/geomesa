@@ -14,16 +14,17 @@ import org.geotools.data.collection.DelegateFeatureReader
 import org.geotools.data.store.{ContentEntry, ContentFeatureStore}
 import org.geotools.data.{FeatureReader, Query}
 import org.geotools.feature.collection.DelegateFeatureIterator
+import org.geotools.filter.{FidFilterImpl, FidFilter}
 import org.geotools.filter.identity.FeatureIdImpl
 import org.geotools.geometry.jts.{JTS, ReferencedEnvelope}
 import org.geotools.referencing.crs.DefaultGeographicCRS
 import org.locationtech.geomesa.feature.AvroFeatureDecoder
 import org.locationtech.geomesa.utils.geotools.Conversions._
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
-import org.opengis.filter.{Filter, Or, IncludeFilter}
 import org.opengis.filter.expression.{Literal, PropertyName}
 import org.opengis.filter.identity.FeatureId
 import org.opengis.filter.spatial.{BBOX, BinarySpatialOperator, Within}
+import org.opengis.filter.{Filter, IncludeFilter, Or}
 
 import scala.collection.JavaConversions._
 
@@ -35,22 +36,50 @@ class KafkaConsumerFeatureSource(entry: ContentEntry,
   extends ContentFeatureStore(entry, query) {
 
   type FR = FeatureReader[SimpleFeatureType, SimpleFeature]
-  val qt = new Quadtree
-  val features = scala.collection.mutable.HashMap.empty[String, SimpleFeature]
+  var qt = new Quadtree
+
+  case class FeatureHolder(sf: SimpleFeature, env: Envelope) {
+    override def hashCode(): Int = sf.hashCode()
+
+    override def equals(obj: scala.Any): Boolean = obj match {
+      case other: FeatureHolder => sf.equals(other.sf)
+      case _ => false
+    }
+  }
+
+  val features = scala.collection.mutable.HashMap.empty[String, FeatureHolder]
 
   eb.register(this)
 
   @Subscribe
-  def processNewFeatures(sf: SimpleFeature): Unit = {
-    qt.insert(sf.point.getEnvelopeInternal, sf)
-    features.put(sf.getID, sf)
+  def processProtocolMessage(msg: KafkaGeoMessage): Unit = msg match {
+    case update: CreateOrUpdate => processNewFeatures(update)
+    case del: Delete            => removeFeature(del)
+    case Clear                  => clear()
+    case _     => throw new IllegalArgumentException("Should never happen")
   }
 
-  @Subscribe
-  def removeFeature(id: String): Unit = {
-    features.remove(id).foreach { sf =>
-      qt.remove(sf.point.getEnvelopeInternal, sf)
+  def processNewFeatures(update: CreateOrUpdate): Unit = {
+    val sf = update.f
+    val id = update.id
+    if(features.contains(id)) {
+      val old = features(id)
+      qt.remove(old.env, sf)
     }
+    val env = sf.geometry.getEnvelopeInternal
+    qt.insert(env, sf)
+    features.put(sf.getID, FeatureHolder(sf, env))
+  }
+
+  def removeFeature(toDelete: Delete): Unit = {
+    features.remove(toDelete.id).foreach { holder =>
+      qt.remove(holder.env, holder.sf)
+    }
+  }
+
+  def clear(): Unit = {
+    features.clear()
+    qt = new Quadtree
   }
 
   override def getBoundsInternal(query: Query) =
@@ -65,15 +94,22 @@ class KafkaConsumerFeatureSource(entry: ContentEntry,
 
   def getReaderForFilter(f: Filter): FR =
     f match {
-      case o: Or            => or(o)
-      case i: IncludeFilter => include(i)
-      case w: Within        => within(w)
-      case b: BBOX          => bbox(b)
+      case o: Or             => or(o)
+      case i: IncludeFilter  => include(i)
+      case w: Within         => within(w)
+      case b: BBOX           => bbox(b)
+      case id: FidFilterImpl => fid(id)
     }
 
   type DFR = DelegateFeatureReader[SimpleFeatureType, SimpleFeature]
   type DFI = DelegateFeatureIterator[SimpleFeature]
-  def include(i: IncludeFilter) = new DFR(schema, new DFI(features.values.iterator))
+
+  def include(i: IncludeFilter) = new DFR(schema, new DFI(features.values.map(_.sf).iterator))
+
+  def fid(ids: FidFilterImpl): FR = {
+    val iter = ids.getIDs.flatMap(id => features.get(id.toString).map(_.sf)).iterator
+    new DFR(schema, new DFI(iter))
+  }
 
   def or(o: Or): FR = {
     val readers = o.getChildren.map(getReaderForFilter).map(_.getIterator)
@@ -113,11 +149,17 @@ class KafkaConsumerFeatureSource(entry: ContentEntry,
   override def getWriterInternal(query: Query, flags: Int) = throw new IllegalArgumentException("Not allowed")
 }
 
+sealed trait KafkaGeoMessage
+case class CreateOrUpdate(id: String, f: SimpleFeature)  extends KafkaGeoMessage
+case class Delete(id: String) extends KafkaGeoMessage
+case object Clear extends KafkaGeoMessage
+
 trait FeatureProducer {
   def eventBus: EventBus
-  def produceFeatures(f: SimpleFeature): Unit = eventBus.post(f)
-  def deleteFeature(id: String): Unit = eventBus.post(id)
+  def produceFeatures(f: SimpleFeature): Unit = eventBus.post(CreateOrUpdate(f.getID, f))
+  def deleteFeature(id: String): Unit = eventBus.post(Delete(id))
   def deleteFeatures(ids: Seq[String]): Unit = ids.foreach(deleteFeature)
+  def clear(): Unit = eventBus.post(Clear)
 }
 
 class KafkaFeatureConsumer(topic: String, 

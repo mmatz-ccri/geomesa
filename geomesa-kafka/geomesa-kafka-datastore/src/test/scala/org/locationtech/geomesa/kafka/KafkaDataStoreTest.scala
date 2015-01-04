@@ -7,8 +7,8 @@ import com.vividsolutions.jts.geom.Coordinate
 import kafka.server.KafkaConfig
 import kafka.utils.{TestUtils, TestZKUtils, Utils}
 import org.apache.zookeeper.server.{NIOServerCnxnFactory, ZooKeeperServer}
-import org.geotools.data.{DataStoreFinder, FeatureStore, Query, Transaction}
-import org.geotools.factory.CommonFactoryFinder
+import org.geotools.data._
+import org.geotools.factory.{CommonFactoryFinder, Hints}
 import org.geotools.geometry.jts.JTSFactoryFinder
 import org.joda.time.DateTime
 import org.junit.runner.RunWith
@@ -69,6 +69,7 @@ class KafkaDataStoreTest extends Specification with Logging {
       // create the consumerFC first so that it is ready to receive features from the producer
       val consumerFC = consumerDS.getFeatureSource("test")
 
+      val store = producerDS.getFeatureSource("test").asInstanceOf[FeatureStore[SimpleFeatureType, SimpleFeature]]
       val fw = producerDS.getFeatureWriter("test", null, Transaction.AUTO_COMMIT)
       val sf = fw.next()
       sf.setAttributes(Array("smith", 30, DateTime.now().toDate).asInstanceOf[Array[AnyRef]])
@@ -82,10 +83,23 @@ class KafkaDataStoreTest extends Specification with Logging {
       }
 
       "allow features to be deleted" >> {
-        val store = producerDS.getFeatureSource("test").asInstanceOf[FeatureStore[SimpleFeatureType, SimpleFeature]]
         store.removeFeatures(ff.id(ff.featureId("1")))
         Thread.sleep(500) // ensure FC has seen the delete
         consumerFC.getCount(Query.ALL) must be equalTo 0
+      }
+
+      "allow modifications of existing features" >> {
+        val updated = sf
+        updated.setAttribute("name", "jones")
+        updated.getUserData.put(Hints.USE_PROVIDED_FID, java.lang.Boolean.TRUE)
+        store.addFeatures(DataUtilities.collection(updated))
+
+        Thread.sleep(500)
+        val q = ff.id(updated.getIdentifier)
+        val featureCollection = consumerFC.getFeatures(q)
+        featureCollection.size() must be equalTo 1
+        val res = featureCollection.features().next()
+        res.getAttribute("name") must be equalTo "jones"
       }
     }
   }
