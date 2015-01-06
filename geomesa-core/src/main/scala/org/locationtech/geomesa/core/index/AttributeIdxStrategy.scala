@@ -102,6 +102,7 @@ trait AttributeIdxStrategy extends Strategy with Logging {
         SelfClosingIterator(attrScanner)
 
       case RecordJoinIterator =>
+        output("Using record join iterator")
         stFilter.foreach { filter =>
           // apply a filter for the indexed date and geometry
           val cfg = configureSpatioTemporalFilter(featureType, encoding, stFilter)
