@@ -27,8 +27,6 @@ import org.apache.hadoop.io.Text
 import org.geotools.data.Query
 import org.geotools.filter.text.ecql.ECQL
 import org.locationtech.geomesa.core.GEOMESA_ITERATORS_IS_DENSITY_TYPE
-import org.locationtech.geomesa.feature.FeatureEncoding
-import FeatureEncoding.FeatureEncoding
 import org.locationtech.geomesa.core.data._
 import org.locationtech.geomesa.core.filter._
 import org.locationtech.geomesa.core.index.FilterHelper._
@@ -36,6 +34,7 @@ import org.locationtech.geomesa.core.index.QueryHints._
 import org.locationtech.geomesa.core.index.QueryPlanner._
 import org.locationtech.geomesa.core.iterators._
 import org.locationtech.geomesa.core.util.{SelfClosingBatchScanner, SelfClosingIterator}
+import org.locationtech.geomesa.feature.FeatureEncoding.FeatureEncoding
 import org.opengis.feature.simple.SimpleFeatureType
 import org.opengis.filter.Filter
 import org.opengis.filter.expression.{Expression, Literal, PropertyName}
@@ -125,9 +124,6 @@ class STIdxStrategy extends Strategy with Logging with IndexFilterHelpers {
 
     val oint  = IndexSchema.somewhen(interval)
 
-    // set up row ranges and regular expression filter
-    val qp = planQuery(filter, output, keyPlanner, cfPlanner)
-
     output(s"STII Filter: ${ofilter.getOrElse("No STII Filter")}")
     output(s"Interval:  ${oint.getOrElse("No interval")}")
     output(s"Filter: ${Option(filter).getOrElse("No Filter")}")
@@ -137,6 +133,9 @@ class STIdxStrategy extends Strategy with Logging with IndexFilterHelpers {
     val stiiIterCfg = getSTIIIterCfg(iteratorConfig, query, featureType, ofilter, ecql, featureEncoding)
 
     val densityIterCfg = getDensityIterCfg(query, geometryToCover, schema, featureEncoding, featureType)
+
+    // set up row ranges and regular expression filter
+    val qp = planQuery(filter, iteratorConfig.iterator, output, keyPlanner, cfPlanner)
 
     qp.copy(iterators = qp.iterators ++ List(Some(stiiIterCfg), densityIterCfg).flatten)
   }
@@ -217,9 +216,19 @@ class STIdxStrategy extends Strategy with Logging with IndexFilterHelpers {
     cfg
   }
 
-  def planQuery(filter: KeyPlanningFilter, output: ExplainerOutputType, keyPlanner: KeyPlanner, cfPlanner: ColumnFamilyPlanner): QueryPlan = {
+  def planQuery(filter: KeyPlanningFilter,
+                iter: IteratorChoice,
+                output: ExplainerOutputType,
+                keyPlanner: KeyPlanner,
+                cfPlanner: ColumnFamilyPlanner): QueryPlan = {
     output(s"Planning query")
-    val keyPlan = keyPlanner.getKeyPlan(filter, output)
+
+    val indexOnly = iter match {
+      case IndexOnlyIterator      => true
+      case SpatioTemporalIterator => false
+    }
+
+    val keyPlan = keyPlanner.getKeyPlan(filter, indexOnly, output)
 
     val columnFamilies = cfPlanner.getColumnFamiliesToFetch(filter)
 
@@ -229,7 +238,7 @@ class STIdxStrategy extends Strategy with Logging with IndexFilterHelpers {
       case _ => Seq(new org.apache.accumulo.core.data.Range())
     }
 
-    output(s"Total ranges: ${accRanges.size}")
+    output(s"Total ranges: ${accRanges.size} - ${accRanges.take(5)}")
 
     // always try to set a RowID regular expression
     //@TODO this is broken/disabled as a result of the KeyTier

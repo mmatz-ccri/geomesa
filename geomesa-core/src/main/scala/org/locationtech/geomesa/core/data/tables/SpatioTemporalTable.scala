@@ -21,7 +21,6 @@ import org.apache.accumulo.core.client.{BatchDeleter, BatchWriter, Connector}
 import org.apache.accumulo.core.data
 import org.apache.accumulo.core.data.{Key, Mutation, Value}
 import org.apache.hadoop.io.Text
-import org.locationtech.geomesa.core.index.IndexEntryDecoder._
 import org.locationtech.geomesa.core.index.{IndexEntryEncoder, IndexSchema, _}
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 
@@ -29,20 +28,17 @@ import scala.collection.JavaConverters._
 
 object SpatioTemporalTable extends Logging {
 
-  val NULLBYTE = "\u0000".getBytes("UTF-8")
+  val INDEX_FLAG = "0"
+  val DATA_FLAG = "1"
 
-  // index suffix needs to sort before data suffix
-  val INDEX_CQ_SUFFIX: Array[Byte] = NULLBYTE ++ "0".getBytes("UTF-8")
-  val DATA_CQ_SUFFIX: Array[Byte] = NULLBYTE ++ "1".getBytes("UTF-8")
+  val INDEX_CHECK = s"~$INDEX_FLAG~"
+  val DATA_CHECK = s"~$DATA_FLAG~"
 
-  // if it's not a data entry, it's an index entry
-  // (though we still share some requirements -- non-nulls -- with data entries)
-  def isIndexEntry(key: Key): Boolean = key.getColumnQualifier.getBytes.endsWith(INDEX_CQ_SUFFIX)
+  // index rows have an index flag as part of the schema
+  def isIndexEntry(key: Key): Boolean = key.getRow.find(INDEX_CHECK) != -1
 
-  // data rows are the only ones with "SimpleFeatureAttribute" in the ColQ
-  // (if we expand on the idea of separating out attributes more, we will need
-  // to revisit this function)
-  def isDataEntry(key: Key): Boolean = key.getColumnQualifier.getBytes.endsWith(DATA_CQ_SUFFIX)
+  // data rows have a data flag as part of the schema
+  def isDataEntry(key: Key): Boolean = key.getRow.find(DATA_CHECK) != -1
 
   def spatioTemporalWriter(bw: BatchWriter, visibility: String, encoder: IndexEntryEncoder): SimpleFeature => Unit =
     (feature: SimpleFeature) => {
@@ -73,32 +69,40 @@ object SpatioTemporalTable extends Logging {
     val MIN_START = "\u0000"
     val MAX_END = "~"
 
-    val schema = getIndexSchema(sft)
-      .getOrElse(throw new Exception("Cannot delete ${sft.getTypeName}.  SFT does not have its index schema stored."))
+    val schema = getIndexSchema(sft).getOrElse {
+      val msg = s"Cannot delete ${sft.getTypeName}. SFT does not have its index schema stored."
+      throw new Exception(msg)
+    }
 
     val (rowf, _,_) = IndexSchema.parse(IndexSchema.formatter, schema).get
-    rowf.lf match {
-      case Seq(pf: PartitionTextFormatter, const: ConstantTextFormatter, r@_*) =>
-        // Build ranges using pf and const!
+    val planners = rowf.lf match {
+      case Seq(pf: PartitionTextFormatter, i: IndexOrDataTextFormatter, const: ConstantTextFormatter, r@_*) =>
+        // Build ranges using pf, ip and const!
         val rpp = RandomPartitionPlanner(pf.numPartitions)
+        val ip = IndexOrDataPlanner()
         val csp = ConstStringPlanner(const.constStr)
+        Seq(rpp, ip, csp)
 
-        val planner =  CompositePlanner(Seq(rpp, csp), "~")
-        val kp = planner.getKeyPlan(AcceptEverythingFilter, ExplainPrintln)
-
-        val rs: Seq[data.Range] = kp match {
-          case KeyRanges(ranges) =>
-            ranges.map { r =>
-              new org.apache.accumulo.core.data.Range(r.start + "~" + MIN_START, r.end + "~" + MAX_END)
-            }
-          case _ => logger.error(s"Keyplanner failed to build range properly."); Seq()
-        }
-
-        bd.setRanges(rs.asJavaCollection)
-        bd.delete()
-        bd.close()
-
-      case _ => throw new RuntimeException(s"Cannot delete ${sft.getTypeName}.  SFT has the wrong schema structure..")
+      case _ =>
+        throw new RuntimeException(s"Cannot delete ${sft.getTypeName}. SFT has an invalid schema structure.")
     }
+
+    val planner =  CompositePlanner(planners, "~")
+    val keyPlans =
+      Seq(true, false).map(indexOnly => planner.getKeyPlan(AcceptEverythingFilter, indexOnly, ExplainNull))
+
+    val ranges = keyPlans.map { kp =>
+      kp match {
+        case KeyRanges(rs) => rs.map(r => new data.Range(r.start + "~" + MIN_START, r.end + "~" + MAX_END))
+        case _ =>
+          logger.error(s"Keyplanner failed to build range properly.")
+          Seq.empty
+      }
+    }.flatten
+
+    bd.setRanges(ranges.asJavaCollection)
+    bd.delete()
+    bd.close()
+
   }
 }

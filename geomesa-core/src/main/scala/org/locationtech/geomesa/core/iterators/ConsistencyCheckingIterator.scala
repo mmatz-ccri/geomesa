@@ -22,12 +22,12 @@ import org.apache.accumulo.core.data._
 import org.apache.accumulo.core.iterators.{IteratorEnvironment, SortedKeyValueIterator}
 import org.apache.hadoop.io.Text
 import org.locationtech.geomesa.core.data.tables.SpatioTemporalTable
+import org.locationtech.geomesa.core.data.tables.SpatioTemporalTable.{DATA_CHECK, INDEX_CHECK}
 import org.locationtech.geomesa.core.index.IndexValueEncoder
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 
 class ConsistencyCheckingIterator extends SortedKeyValueIterator[Key, Value] with Logging {
 
-  import org.locationtech.geomesa.core.data.tables.SpatioTemporalTable._
   import scala.collection.JavaConversions._
 
   private var indexSource: SortedKeyValueIterator[Key, Value] = null
@@ -64,18 +64,18 @@ class ConsistencyCheckingIterator extends SortedKeyValueIterator[Key, Value] wit
 
     while (nextKey == null && indexSource.hasTop) {
       nextKey = indexSource.getTopKey
-      if (nextKey.getColumnQualifier.getBytes.endsWith(DATA_CQ_SUFFIX)) {
+      if (SpatioTemporalTable.isDataEntry(nextKey)) {
         nextKey = null
       } else {
         logger.debug(s"Checking $nextKey")
         curId = indexValueEncoder.decode(indexSource.getTopValue.get).id
 
-        val dataCq =
-          new Text(nextKey.getColumnQualifier.getBytes.dropRight(INDEX_CQ_SUFFIX.length) ++ DATA_CQ_SUFFIX)
-        val dataSeekKey = new Key(nextKey.getRow, nextKey.getColumnFamily, dataCq)
+        val dataSeekKey = new Key(new Text(nextKey.getRow.toString.replace(INDEX_CHECK, DATA_CHECK)),
+          nextKey.getColumnFamily, nextKey.getColumnQualifier)
         dataSource.seek(new Range(dataSeekKey, null), Seq.empty[ByteSequence], false)
 
-        if (!dataSource.hasTop || dataSource.getTopKey.getColumnQualifier.toString != dataCq.toString) {
+        if (!dataSource.hasTop ||
+            dataSource.getTopKey.getColumnQualifier.toString != nextKey.getColumnQualifier.toString) {
           logger.warn(s"Found an inconsistent entry: $nextKey")
         } else {
           nextKey = null

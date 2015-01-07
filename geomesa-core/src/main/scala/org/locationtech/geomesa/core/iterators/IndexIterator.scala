@@ -41,9 +41,6 @@ class IndexIterator
     with MethodProfiling
     with Logging {
 
-  // replace this with 'timings' to enable profile logging
-  import org.locationtech.geomesa.core.iterators.IndexIterator.noOpTimings
-
   protected var topKey: Option[Key] = None
   protected var topValue: Option[Value] = None
   protected var source: SortedKeyValueIterator[Key, Value] = null
@@ -75,7 +72,7 @@ class IndexIterator
    */
   override def seek(range: Range, columnFamilies: java.util.Collection[ByteSequence], inclusive: Boolean) {
     // move the source iterator to the right starting spot
-    profile(source.seek(range, columnFamilies, inclusive), "source.seek")
+    source.seek(range, columnFamilies, inclusive)
     findTop()
   }
 
@@ -94,30 +91,33 @@ class IndexIterator
     topValue = None
 
     // loop while there is more data and we haven't matched our filter
-    while (topValue.isEmpty && profile(source.hasTop, "source.hasTop")) {
+    while (topValue.isEmpty && source.hasTop) {
 
-      val indexKey = profile(source.getTopKey, "source.getTopKey")
+      val indexKey = source.getTopKey
 
-      if (SpatioTemporalTable.isIndexEntry(indexKey)) { // if this is a data entry, skip it
+      if (!SpatioTemporalTable.isIndexEntry(indexKey)) {
+        // if this is a data entry, skip it
+        logger.warn("Found unexpected data entry: " + indexKey)
+      } else {
         // the value contains the full-resolution geometry and time plus feature ID
-        val decodedValue = profile(indexEncoder.decode(source.getTopValue.get), "decodeIndexValue")
+        val decodedValue = indexEncoder.decode(source.getTopValue.get)
 
         // evaluate the filter checks, in least to most expensive order
-        val meetsIndexFilters = profile(checkUniqueId.forall(fn => fn(decodedValue.id)), "checkUniqueId") &&
-            profile(stFilter.forall(fn => fn(decodedValue.geom, decodedValue.date.map(_.getTime))), "stFilter")
+        val meetsIndexFilters = checkUniqueId.forall(fn => fn(decodedValue.id)) &&
+            stFilter.forall(fn => fn(decodedValue.geom, decodedValue.date.map(_.getTime)))
 
         if (meetsIndexFilters) { // we hit a valid geometry, date and id
-          val transformedFeature = profile(encodeIndexValueToSF(decodedValue), "encodeIndexValueToSF")
+          val transformedFeature = encodeIndexValueToSF(decodedValue)
           // update the key and value
           // copy the key because reusing it is UNSAFE
           topKey = Some(indexKey)
-          topValue = profile(transform.map(fn => new Value(fn(transformedFeature))), "transform")
-              .orElse(Some(new Value(profile(featureEncoder.encode(transformedFeature), "featureEncoder.encode"))))
+          topValue = transform.map(fn => new Value(fn(transformedFeature)))
+              .orElse(Some(new Value(featureEncoder.encode(transformedFeature))))
         }
       }
 
       // increment the underlying iterator
-      profile(source.next(), "source.next")
+      source.next()
     }
   }
 
@@ -126,7 +126,6 @@ class IndexIterator
 }
 
 object IndexIterator {
-
   implicit val timings: Timings = new AutoLoggingTimings()
   implicit val noOpTimings: Timings = new NoOpTimings()
 }

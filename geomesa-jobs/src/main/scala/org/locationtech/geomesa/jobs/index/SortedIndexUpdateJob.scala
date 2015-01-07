@@ -32,6 +32,7 @@ import org.locationtech.geomesa.jobs.scalding._
 import org.opengis.feature.simple.SimpleFeatureType
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Iterable
 
 class SortedIndexUpdateJob(args: Args) extends GeoMesaBaseJob(args) {
 
@@ -62,28 +63,31 @@ class SortedIndexUpdateJob(args: Args) extends GeoMesaBaseJob(args) {
     .using(new SortedIndexUpdateResources)
     .flatMap(('key, 'value) -> 'mutation) { (r: SortedIndexUpdateResources, kv: (Key, Value)) =>
       val key = kv._1
-      if (key.getColumnQualifier.getBytes.endsWith(SpatioTemporalTable.DATA_CQ_SUFFIX) ||
-          key.getColumnQualifier.getBytes.endsWith(SpatioTemporalTable.INDEX_CQ_SUFFIX)) {
+      if (SpatioTemporalTable.isIndexEntry(key) || SpatioTemporalTable.isDataEntry(key)) {
+        // already up-to-date
         Seq.empty
       } else {
         val value = kv._2
         val visibility = key.getColumnVisibilityParsed
-        val mutation = new Mutation(key.getRow)
-        mutation.putDelete(key.getColumnFamily, key.getColumnQualifier, visibility)
-        if (key.getColumnQualifier.toString == "SimpleFeatureAttribute") {
-          // data entry, we need to figure out the new key
-          // we want to put it next to the index entry
+        val delete = new Mutation(key.getRow)
+        delete.putDelete(key.getColumnFamily, key.getColumnQualifier, visibility)
+        val mutations = if (key.getColumnQualifier.toString == "SimpleFeatureAttribute") {
+          // data entry, re-calculate the keys for index and data entries
           val sf = r.decoder.decode(value.get())
-          val newKeys = r.encoder.encode(sf, visibility.toString)
-              .map(_._1).filter(_.getColumnQualifier.getBytes.endsWith(SpatioTemporalTable.DATA_CQ_SUFFIX))
-          newKeys.foreach(k => mutation.put(k.getColumnFamily, k.getColumnQualifier, visibility, value))
+          val newKeys: Map[Text, List[(Key, Value)]] = r.encoder.encode(sf, visibility.toString).groupBy(_._1.getRow)
+          newKeys.map { case (r: Text, keys: List[(Key, Value)]) =>
+            val mutation = new Mutation(r)
+            keys.foreach { case (k: Key, v: Value) =>
+              mutation.put(k.getColumnFamily, k.getColumnQualifier, k.getColumnVisibilityParsed, v)
+            }
+            mutation
+          }
         } else {
-          // index entry, just update the cf
-          val cq = new Text(key.getColumnQualifier.copyBytes() ++ SpatioTemporalTable.INDEX_CQ_SUFFIX)
-          mutation.put(key.getColumnFamily, cq, visibility, value)
+          // index entry, ignore it (will be handled by associated data entry)
+          Seq.empty
         }
-        Seq(mutation)
-      }
+        Seq(delete) ++ mutations
+      } // TODO should migrate the schema...
     }.write(AccumuloSource(options))
 
   // override the run method to schedule a table compaction after the job finishes

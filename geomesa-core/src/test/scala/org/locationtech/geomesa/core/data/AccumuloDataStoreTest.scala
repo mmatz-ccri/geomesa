@@ -98,7 +98,18 @@ class AccumuloDataStoreTest extends Specification {
     }
     "create and retrieve a schema with a custom IndexSchema" in {
       val sftName = "schematestCustomSchema"
-      val indexSchema = buildDefaultIndexSchemaFormat(sftName)
+      val indexSchema =
+        new IndexSchemaBuilder("~")
+          .randomNumber(3)
+          .indexOrDataFlag()
+          .constant(sftName)
+          .geoHash(0, 3)
+          .date("yyyyMMdd")
+          .nextPart()
+          .geoHash(3, 2)
+          .nextPart()
+          .id()
+          .build()
       val sft = SimpleFeatureTypes.createType(sftName, defaultSchema)
       sft.getUserData.put(SF_PROPERTY_START_TIME, "dtg")
       sft.getUserData.put(SFT_INDEX_SCHEMA, indexSchema)
@@ -1222,18 +1233,6 @@ class AccumuloDataStoreTest extends Specification {
     featureCollection.add(liveFeature)
     fs.addFeatures(featureCollection)
   }
-
-  def buildDefaultIndexSchemaFormat(featureName: String) =
-    new IndexSchemaBuilder("~")
-        .randomNumber(3)
-        .constant(featureName)
-        .geoHash(0, 3)
-        .date("yyyyMMdd")
-        .nextPart()
-        .geoHash(3, 2)
-        .nextPart()
-        .id()
-        .build()
 
   def createTestFeatures(sft: SimpleFeatureType) = (0 until 6).map { i =>
     val builder = new SimpleFeatureBuilder(sft, featureFactory)

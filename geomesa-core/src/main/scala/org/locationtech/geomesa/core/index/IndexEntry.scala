@@ -76,25 +76,23 @@ case class IndexEntryEncoder(rowf: TextFormatter,
     val v = new Text(visibility)
     val dt = featureToEncode.dt.getOrElse(new DateTime()).withZone(timeZone)
 
-    // data entries are stored separately (and independently) from the index entries
-    // data entries need to sort immediately after the corresponding index entry to facilitate scans
-
-    // base keys shared by the data and index values
-    val baseKeys = geohashes.map(gh => formats.map(_.format(gh, dt, featureToEncode)))
-
     // the index value is the encoded date/time/fid
     val indexValue = new Value(IndexValueEncoder(featureToEncode.getFeatureType).encode(featureToEncode))
     // the data value is the encoded SimpleFeature
     val dataValue = new Value(featureEncoder.encode(featureToEncode))
 
+    // data entries are stored separately (and independently) from the index entries
     // the entries are (key, value) pairs
-    val indexEntries = baseKeys.map { case Array(row, cf, cqBase) =>
-      val cq = new Text(cqBase.copyBytes() ++ SpatioTemporalTable.INDEX_CQ_SUFFIX)
-      (new Key(row, cf, cq, v), indexValue)
+
+    val indexEntries = geohashes.map { gh =>
+      formats.map(_.format(gh, dt, featureToEncode, true)) match {
+        case Array(row, cf, cq) => (new Key(row, cf, cq, v), indexValue)
+      }
     }
-    val dataEntries = baseKeys.map { case Array(row, cf, cqBase) =>
-      val cq = new Text(cqBase.copyBytes() ++ SpatioTemporalTable.DATA_CQ_SUFFIX)
-      (new Key(row, cf, cq, v), dataValue)
+    val dataEntries = geohashes.map { gh =>
+      formats.map(_.format(gh, dt, featureToEncode, false)) match {
+        case Array(row, cf, cq) => (new Key(row, cf, cq, v), dataValue)
+      }
     }
 
     (indexEntries ++ dataEntries).toList

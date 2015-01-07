@@ -16,10 +16,14 @@
 
 package org.locationtech.geomesa.core.iterators
 
+import java.util.Date
+
 import com.typesafe.scalalogging.slf4j.Logging
+import com.vividsolutions.jts.geom.Geometry
 import org.apache.accumulo.core.data.{ByteSequence, Key, Range, Value}
 import org.apache.accumulo.core.iterators.{IteratorEnvironment, SortedKeyValueIterator}
 import org.locationtech.geomesa.core.data.tables.SpatioTemporalTable
+import org.locationtech.geomesa.core.index
 import org.locationtech.geomesa.utils.stats.{AutoLoggingTimings, MethodProfiling, NoOpTimings, Timings}
 
 /**
@@ -43,12 +47,10 @@ class SpatioTemporalIntersectingIterator
     with MethodProfiling
     with Logging {
 
-  // replace this with 'timings' to enable profile logging
-  import org.locationtech.geomesa.core.iterators.SpatioTemporalIntersectingIterator.noOpTimings
-
   var topKey: Option[Key] = None
   var topValue: Option[Value] = None
   var source: SortedKeyValueIterator[Key, Value] = null
+  var dtgIndex: Option[Int] = None
 
   override def init(
       source: SortedKeyValueIterator[Key, Value],
@@ -58,6 +60,8 @@ class SpatioTemporalIntersectingIterator
     TServerClassLoader.initClassLoader(logger)
     initFeatureType(options)
     init(featureType, options)
+    dtgIndex = index.getDtgFieldName(featureType).map(featureType.indexOf(_))
+
     this.source = source.deepCopy(env)
   }
 
@@ -69,7 +73,7 @@ class SpatioTemporalIntersectingIterator
 
   override def seek(range: Range, columnFamilies: java.util.Collection[ByteSequence], inclusive: Boolean) {
     // move the source iterator to the right starting spot
-    profile(source.seek(range, columnFamilies, inclusive), "source.seek")
+    source.seek(range, columnFamilies, inclusive)
     findTop()
   }
 
@@ -85,49 +89,29 @@ class SpatioTemporalIntersectingIterator
     topValue = None
 
     // loop while there is more data and we haven't matched our filter
-    while (topValue.isEmpty && profile(source.hasTop, "source.hasTop")) {
+    while (topValue.isEmpty && source.hasTop) {
 
-      val indexKey = profile(source.getTopKey, "source.getTopKey")
-
-      if (SpatioTemporalTable.isIndexEntry(indexKey)) { // if this is a data entry, skip it
-        // only decode it if we have a filter to evaluate
-        // the value contains the full-resolution geometry and time plus feature ID
-        lazy val decodedValue = profile(indexEncoder.decode(source.getTopValue.get), "decodeIndexValue")
-
-        // evaluate the filter checks, in least to most expensive order
-        val meetsIndexFilters = profile(checkUniqueId.forall(fn => fn(decodedValue.id)), "checkUniqueId") &&
-            profile(stFilter.forall(fn => fn(decodedValue.geom, decodedValue.date.map(_.getTime))), "stFilter")
-
-        if (meetsIndexFilters) { // we hit a valid geometry, date and id
-          // we increment the source iterator, which should point to a data entry
-          profile(source.next(), "source.next")
-          if (profile(source.hasTop, "source.hasTop")) {
-            val dataKey = profile(source.getTopKey, "source.getTopKey")
-            if (SpatioTemporalTable.isDataEntry(dataKey)) {
-              val dataValue = profile(source.getTopValue, "source.getTopValue")
-              lazy val decodedFeature = profile(featureDecoder.decode(dataValue.get()), "decodeFeature")
-              val meetsEcqlFilter = profile(ecqlFilter.forall(fn => fn(decodedFeature)), "ecqlFilter")
-              if (meetsEcqlFilter) {
-                // update the key and value
-                topKey = Some(dataKey)
-                // apply any transform here
-                topValue = profile(transform.map(fn => new Value(fn(decodedFeature))), "transform")
-                    .orElse(Some(dataValue))
-              }
-            } else {
-              logger.error(s"Could not find the data key corresponding to index key '$indexKey' - " +
-                  "there is no data entry.")
-            }
-          } else {
-            logger.error(s"Could not find the data key corresponding to index key '$indexKey' - " +
-                "there are no more entries")
+      val key = source.getTopKey
+      if (!SpatioTemporalTable.isDataEntry(key)) {
+        logger.warn("Found unexpected index entry: " + key)
+      } else {
+        if (checkUniqueId.forall(fn => fn(key.getColumnQualifier.toString))) {
+          val dataValue = source.getTopValue
+          lazy val sf = featureDecoder.decode(dataValue.get)
+          val meetsStFilter = stFilter.forall(fn => fn(sf.getDefaultGeometry.asInstanceOf[Geometry],
+            dtgIndex.flatMap(i => Option(sf.getAttribute(i).asInstanceOf[Date]).map(_.getTime))))
+          val meetsFilters =  meetsStFilter && ecqlFilter.forall(fn => fn(sf))
+          if (meetsFilters) {
+            // update the key and value
+            topKey = Some(key)
+            // apply any transform here
+            topValue = transform.map(fn => new Value(fn(sf))).orElse(Some(dataValue))
           }
         }
-        // TODO we have a lot of nested ifs here, try to clean it up
       }
 
       // increment the underlying iterator
-      profile(source.next(), "source.next")
+      source.next()
     }
   }
 

@@ -17,7 +17,7 @@
 
 package org.locationtech.geomesa.core.data
 
-import java.util.{Map => JMap, Date}
+import java.util.{Map => JMap}
 
 import com.google.common.collect.ImmutableSortedSet
 import com.typesafe.scalalogging.slf4j.Logging
@@ -35,16 +35,16 @@ import org.geotools.feature.NameImpl
 import org.geotools.geometry.jts.ReferencedEnvelope
 import org.geotools.process.vector.TransformProcess
 import org.geotools.referencing.crs.DefaultGeographicCRS
-import org.joda.time.{DateTime, Interval}
+import org.joda.time.Interval
 import org.locationtech.geomesa.core
 import org.locationtech.geomesa.core.data.AccumuloDataStore._
-import org.locationtech.geomesa.feature.{SimpleFeatureEncoder, FeatureEncoding}
-import FeatureEncoding.FeatureEncoding
 import org.locationtech.geomesa.core.data.tables.{AttributeTable, RecordTable, SpatioTemporalTable}
 import org.locationtech.geomesa.core.index
 import org.locationtech.geomesa.core.index._
 import org.locationtech.geomesa.core.security.AuthorizationsProvider
 import org.locationtech.geomesa.data.TableSplitter
+import org.locationtech.geomesa.feature.FeatureEncoding.FeatureEncoding
+import org.locationtech.geomesa.feature.{FeatureEncoding, SimpleFeatureEncoder}
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes.{FeatureSpec, NonGeomAttributeSpec}
 import org.locationtech.geomesa.utils.time.Time._
@@ -99,6 +99,7 @@ class AccumuloDataStore(val connector: Connector,
   private def buildDefaultSpatioTemporalSchema(name: String, maxShard: Int) =
     new IndexSchemaBuilder("~")
       .randomNumber(maxShard)
+      .indexOrDataFlag()
       .constant(name)
       .geoHash(0, 3)
       .date("yyyyMMdd")
@@ -390,7 +391,7 @@ class AccumuloDataStore(val connector: Connector,
 
       val (rowf, _,_) = IndexSchema.parse(IndexSchema.formatter, schema).get
       rowf.lf match {
-        case Seq(pf: PartitionTextFormatter, const: ConstantTextFormatter, r@_*) =>
+        case Seq(pf: PartitionTextFormatter, i: IndexOrDataTextFormatter, const: ConstantTextFormatter, r@_*) =>
         case _ => throw new RuntimeException(s"Failed to validate the schema requirements for " +
           s"the feature ${featureType.getTypeName} for catalog table : $catalogTable.  " +
           s"We require that features sharing a table have schema starting with a partition and a constant.")

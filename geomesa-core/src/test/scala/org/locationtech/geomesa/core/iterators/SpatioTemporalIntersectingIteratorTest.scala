@@ -82,10 +82,10 @@ class SpatioTemporalIntersectingIteratorTest extends Specification with Logging 
 
     "verify inconsistency of table" in {
       val c = setupMockAccumuloTable(TestData.shortListOfPoints)
-      val bd = c.createBatchDeleter(TEST_TABLE, TEST_AUTHORIZATIONS, 8, new BatchWriterConfig)
+      val bd = c.createBatchDeleter(TEST_TABLE, TEST_AUTHORIZATIONS, 2, new BatchWriterConfig)
       bd.addScanIterator({
         val cfg = new IteratorSetting(100, "regex", classOf[RegExFilter])
-        RegExFilter.setRegexs(cfg, null, null, ".*\\|data\\|1___" + new String(SpatioTemporalTable.DATA_CQ_SUFFIX), null, false)
+        RegExFilter.setRegexs(cfg, ".*~1~.*", null, ".*\\|data\\|1", null, false)
         cfg
       })
       bd.setRanges(List(new org.apache.accumulo.core.data.Range()))
