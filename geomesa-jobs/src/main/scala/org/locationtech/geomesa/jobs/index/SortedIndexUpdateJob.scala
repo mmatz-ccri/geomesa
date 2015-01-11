@@ -19,13 +19,14 @@ package org.locationtech.geomesa.jobs.index
 import java.util
 
 import com.twitter.scalding._
-import org.apache.accumulo.core.data.{Key, Mutation, Range => AcRange, Value}
+import org.apache.accumulo.core.data.{Key, Mutation, Value, Range => AcRange}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.io.Text
 import org.geotools.data.DataStoreFinder
 import org.locationtech.geomesa.core.data._
 import org.locationtech.geomesa.core.data.tables.SpatioTemporalTable
 import org.locationtech.geomesa.core.index._
+import org.locationtech.geomesa.feature.{SimpleFeatureDecoder, SimpleFeatureEncoder}
 import org.locationtech.geomesa.jobs.JobUtils
 import org.locationtech.geomesa.jobs.scalding._
 import org.opengis.feature.simple.SimpleFeatureType
@@ -72,7 +73,7 @@ class SortedIndexUpdateJob(args: Args) extends GeoMesaBaseJob(args) {
         if (key.getColumnQualifier.toString == "SimpleFeatureAttribute") {
           // data entry, we need to figure out the new key
           // we want to put it next to the index entry
-          val sf = r.decoder.decode(value)
+          val sf = r.decoder.decode(value.get())
           val newKeys = r.encoder.encode(sf, visibility.toString)
               .map(_._1).filter(_.getColumnQualifier.getBytes.endsWith(SpatioTemporalTable.DATA_CQ_SUFFIX))
           newKeys.foreach(k => mutation.put(k.getColumnFamily, k.getColumnQualifier, visibility, value))

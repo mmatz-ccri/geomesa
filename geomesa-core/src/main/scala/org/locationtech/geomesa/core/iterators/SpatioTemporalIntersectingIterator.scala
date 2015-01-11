@@ -105,7 +105,7 @@ class SpatioTemporalIntersectingIterator
             val dataKey = profile(source.getTopKey, "source.getTopKey")
             if (SpatioTemporalTable.isDataEntry(dataKey)) {
               val dataValue = profile(source.getTopValue, "source.getTopValue")
-              lazy val decodedFeature = profile(featureDecoder.decode(dataValue), "decodeFeature")
+              lazy val decodedFeature = profile(featureDecoder.decode(dataValue.get()), "decodeFeature")
               val meetsEcqlFilter = profile(ecqlFilter.forall(fn => fn(decodedFeature)), "ecqlFilter")
               if (meetsEcqlFilter) {
                 // update the key and value

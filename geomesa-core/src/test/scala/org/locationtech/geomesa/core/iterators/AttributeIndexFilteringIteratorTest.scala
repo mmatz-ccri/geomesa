@@ -20,12 +20,7 @@ import java.text.SimpleDateFormat
 import java.util.TimeZone
 
 import com.vividsolutions.jts.geom.Geometry
-import org.apache.accumulo.core.client.admin.TimeType
-import org.apache.accumulo.core.client.mock.MockInstance
-import org.apache.accumulo.core.client.security.tokens.PasswordToken
-import org.apache.accumulo.core.client.{BatchWriterConfig, IteratorSetting}
 import org.apache.accumulo.core.data.{Range => ARange}
-import org.apache.accumulo.core.security.{Authorizations, ColumnVisibility}
 import org.geotools.data.{DataStoreFinder, Query}
 import org.geotools.factory.{CommonFactoryFinder, Hints}
 import org.geotools.feature.DefaultFeatureCollection
@@ -34,7 +29,6 @@ import org.geotools.filter.text.ecql.ECQL
 import org.joda.time.{DateTime, DateTimeZone}
 import org.junit.runner.RunWith
 import org.locationtech.geomesa.core.data._
-import org.locationtech.geomesa.core.data.tables.AttributeTable
 import org.locationtech.geomesa.core.index
 import org.locationtech.geomesa.core.index.{AttributeIdxEqualsStrategy, AttributeIdxLikeStrategy, QueryStrategyDecider, STIdxStrategy}
 import org.locationtech.geomesa.utils.geotools.Conversions._

@@ -93,7 +93,7 @@ class RecordTableIterator
 
       val sourceValue = source.getTopValue
       // the value contains the full-resolution geometry and time
-      lazy val feature = featureDecoder.decode(sourceValue)
+      lazy val feature = featureDecoder.decode(sourceValue.get())
       // TODO we could decode it already transformed if we check that the filters are covered
       // evaluate the filter check
       val meetsFilters = ecqlFilter.forall(fn => fn(feature))
