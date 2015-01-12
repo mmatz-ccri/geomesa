@@ -39,6 +39,9 @@ object SimpleFeatureTypes {
   val OPT_INDEX_VALUE        = "index-value"
   val OPT_INDEX              = "index"
 
+  // use the epsg jar if it's available (e.g. in geoserver), otherwise use the less-rich constant
+  val CRS_EPSG_4326          = Try(CRS.decode("EPSG:4326")).getOrElse(DefaultGeographicCRS.WGS84)
+
   def createType(nameSpec: String, spec: String): SimpleFeatureType = {
     val nsIndex = nameSpec.lastIndexOf(':')
     val (namespace, name) = if (nsIndex == -1 || nsIndex == nameSpec.length - 1) {
@@ -210,7 +213,7 @@ object SimpleFeatureTypes {
       b.binding(clazz)
           .userData(OPT_INDEX, index)
           .userData(OPT_INDEX_VALUE, indexValue)
-          .crs(Try(CRS.decode("EPSG:4326")).getOrElse(DefaultGeographicCRS.WGS84))
+          .crs(CRS_EPSG_4326)
           .buildDescriptor(name)
     }
 
