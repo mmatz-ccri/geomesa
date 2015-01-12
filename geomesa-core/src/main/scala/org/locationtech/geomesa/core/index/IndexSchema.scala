@@ -140,7 +140,7 @@ object IndexSchema extends RegexParsers with Logging {
   // with a '~'
   def sep = pattern("\\W".r, SEPARATOR_CODE)
 
-  // A random partitioner.  '%999#r' would write a random value between 000 and 999 inclusive
+  // A random partitioner.  '%999#r' would write a random value between 000 and 998 inclusive
   def randPartitionPattern = pattern("\\d+".r,RANDOM_CODE)
   def randEncoder: Parser[PartitionTextFormatter] = randPartitionPattern ^^ {
     case d => PartitionTextFormatter(d.toInt)

@@ -136,8 +136,7 @@ class AccumuloDataStore(val connector: Connector,
    */
   private def writeMetadata(sft: SimpleFeatureType,
                             fe: FeatureEncoding,
-                            spatioTemporalSchemaValue: String,
-                            maxShard: Int) {
+                            spatioTemporalSchemaValue: String) {
 
     // compute the metadata values
     val attributesValue = SimpleFeatureTypes.encodeType(sft)
@@ -345,8 +344,10 @@ class AccumuloDataStore(val connector: Connector,
                                       featureType: SimpleFeatureType,
                                       tableName: String) {
 
-    val splits = (1 to maxShard).map { i => s"%0${maxShard.toString.length}d".format(i) }.map(new Text(_))
-    tableOps.addSplits(tableName, new java.util.TreeSet(splits))
+    if (maxShard > 1) {
+      val splits = (1 to maxShard - 1).map { i => s"%0${maxShard.toString.length}d".format(i) }.map(new Text(_))
+      tableOps.addSplits(tableName, new java.util.TreeSet(splits))
+    }
 
     // enable the column-family functor
     tableOps.setProperty(tableName, "table.bloom.key.functor", classOf[ColumnFamilyFunctor].getCanonicalName)
@@ -380,7 +381,7 @@ class AccumuloDataStore(val connector: Connector,
       val spatioTemporalSchema = computeSpatioTemporalSchema(featureType, maxShard)
       checkSchemaRequirements(featureType, spatioTemporalSchema)
       createTablesForType(featureType, maxShard)
-      writeMetadata(featureType, featureEncoding, spatioTemporalSchema, maxShard)
+      writeMetadata(featureType, featureEncoding, spatioTemporalSchema)
     }
 
   // This function enforces the shared ST schema requirements.

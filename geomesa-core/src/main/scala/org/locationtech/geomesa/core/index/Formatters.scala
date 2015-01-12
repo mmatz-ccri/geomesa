@@ -83,9 +83,10 @@ case class DateTextFormatter(f: String) extends BaseTextFormatter {
  *       server.  (How likely is this to happen?)</li>
  * </ul>
  *
- * @param numPartitions "%99#r" will mean:  create shards from 0..99
+ * @param shards "%99#r" will mean:  create shards from 0..98
  */
-case class PartitionTextFormatter(numPartitions: Int) extends BaseTextFormatter {
+case class PartitionTextFormatter(shards: Int) extends BaseTextFormatter {
+  val numPartitions = if (shards > 1) shards - 1 else 0
   val numBits: Int = numPartitions.toString.length
   val fmt = ("%0" + numBits + "d").format(_: Int)
 

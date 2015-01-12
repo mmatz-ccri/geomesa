@@ -57,7 +57,7 @@ class QueryPlannersTest extends Specification {
     }
 
     "return appropriate regexes for regex" in {
-      val planners = List(ConstStringPlanner("foo"), RandomPartitionPlanner(2), GeoHashKeyPlanner(0,1))
+      val planners = List(ConstStringPlanner("foo"), RandomPartitionPlanner(3), GeoHashKeyPlanner(0,1))
       val cp = CompositePlanner(planners, "~")
       val poly = WKTUtils.read("POLYGON((-109 31, -115 31, -115 37,-109 37,-109 31))").asInstanceOf[Polygon]
       val kp = cp.getKeyPlan(SpatialFilter(poly), true, ExplainPrintln)

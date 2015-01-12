@@ -331,7 +331,8 @@ case class GeoHashColumnFamilyPlanner(offset: Int, bits: Int) extends ColumnFami
   def getColumnFamiliesToFetch(filter: KeyPlanningFilter): KeyPlan = getKeyPlan(filter, offset, bits)
 }
 
-case class RandomPartitionPlanner(numPartitions: Int) extends KeyPlanner {
+case class RandomPartitionPlanner(shards: Int) extends KeyPlanner {
+  val numPartitions = if (shards > 1) shards - 1 else 0
   val numBits: Int = numPartitions.toString.length
   def getKeyPlan(filter: KeyPlanningFilter, indexOnly: Boolean, output: ExplainerOutputType) = {
     val keys = (0 to numPartitions).map(_.toString.reverse.padTo(numBits,"0").reverse.mkString)
