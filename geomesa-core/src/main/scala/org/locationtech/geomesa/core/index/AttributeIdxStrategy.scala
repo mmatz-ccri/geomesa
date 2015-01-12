@@ -16,19 +16,14 @@
 
 package org.locationtech.geomesa.core.index
 
-
 import java.util.Map.Entry
-import java.util.{Collection => JCollection, Map => JMap}
 
 import com.typesafe.scalalogging.slf4j.Logging
-import org.apache.accumulo.core.client.{BatchScanner, IteratorSetting, Scanner}
+import org.apache.accumulo.core.client.IteratorSetting
 import org.apache.accumulo.core.data.{Key, Value, Range => AccRange}
 import org.apache.hadoop.io.Text
 import org.geotools.data.Query
-import org.geotools.filter.text.ecql.ECQL
 import org.geotools.temporal.`object`.DefaultPeriod
-import org.locationtech.geomesa.core.ST_FILTER_PROPERTY_NAME
-import org.locationtech.geomesa.core.data.FeatureEncoding.FeatureEncoding
 import org.locationtech.geomesa.core.data._
 import org.locationtech.geomesa.core.data.tables.{AttributeTable, RecordTable}
 import org.locationtech.geomesa.core.filter._
@@ -36,6 +31,8 @@ import org.locationtech.geomesa.core.index.FilterHelper._
 import org.locationtech.geomesa.core.index.QueryPlanner._
 import org.locationtech.geomesa.core.iterators._
 import org.locationtech.geomesa.core.util.{BatchMultiScanner, SelfClosingIterator}
+import org.locationtech.geomesa.feature.FeatureEncoding.FeatureEncoding
+import org.locationtech.geomesa.feature.SimpleFeatureDecoder
 import org.locationtech.geomesa.utils.geotools.Conversions.RichAttributeDescriptor
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.opengis.feature.simple.SimpleFeatureType
@@ -137,7 +134,7 @@ trait AttributeIdxStrategy extends Strategy with Logging {
       val returnSft = Option(query.getHints.get(TRANSFORM_SCHEMA).asInstanceOf[SimpleFeatureType])
           .getOrElse(featureType)
       val decoder = SimpleFeatureDecoder(returnSft, iqp.featureEncoding)
-      val deduper = new DeDuplicatingIterator(iter, (_: Key, value: Value) => decoder.extractFeatureId(value))
+      val deduper = new DeDuplicatingIterator(iter, (_: Key, value: Value) => decoder.extractFeatureId(value.get))
       SelfClosingIterator(deduper)
     } else {
       iter

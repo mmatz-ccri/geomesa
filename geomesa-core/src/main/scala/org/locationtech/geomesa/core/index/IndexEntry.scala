@@ -7,8 +7,8 @@ import org.apache.hadoop.io.Text
 import org.geotools.feature.simple.SimpleFeatureBuilder
 import org.joda.time.{DateTime, DateTimeZone}
 import org.locationtech.geomesa.core._
-import org.locationtech.geomesa.core.data.SimpleFeatureEncoder
 import org.locationtech.geomesa.core.data.tables.SpatioTemporalTable
+import org.locationtech.geomesa.feature.SimpleFeatureEncoder
 import org.locationtech.geomesa.utils.geohash.{GeoHash, GeohashUtils}
 import org.opengis.feature.simple.SimpleFeature
 

@@ -21,7 +21,6 @@ import org.apache.accumulo.core.data._
 import org.apache.accumulo.core.iterators.{IteratorEnvironment, SortedKeyValueIterator}
 import org.locationtech.geomesa.core._
 import org.locationtech.geomesa.core.data.tables.AttributeTable._
-import org.locationtech.geomesa.core.index._
 import org.opengis.feature.`type`.AttributeDescriptor
 
 import scala.util.{Failure, Success}
