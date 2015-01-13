@@ -1006,6 +1006,7 @@ class AccumuloDataStoreTest extends Specification {
 
     "allow caching to be configured" in {
       val sftName = "cachingTest"
+
       DataStoreFinder.getDataStore(Map(
         "instanceId"        -> "mycloud",
         "zookeepers"        -> "zoo1:2181,zoo2:2181,zoo3:2181",
@@ -1016,6 +1017,7 @@ class AccumuloDataStoreTest extends Specification {
         "useMock"           -> "true",
         "caching"           -> false,
         "featureEncoding"   -> "avro")).asInstanceOf[AccumuloDataStore].cachingConfig must beFalse
+
       DataStoreFinder.getDataStore(Map(
         "instanceId"        -> "mycloud",
         "zookeepers"        -> "zoo1:2181,zoo2:2181,zoo3:2181",
@@ -1028,7 +1030,7 @@ class AccumuloDataStoreTest extends Specification {
         "featureEncoding"   -> "avro")).asInstanceOf[AccumuloDataStore].cachingConfig must beTrue
     }
 
-    "use caching by default" in {
+    "not use caching by default" in {
       val sftName = "cachingTest"
       val instance = new MockInstance
       val connector = instance.getConnector("user", new PasswordToken("pass".getBytes()))
@@ -1036,7 +1038,7 @@ class AccumuloDataStoreTest extends Specification {
         "connector" -> connector,
         "tableName" -> sftName)
       val ds = DataStoreFinder.getDataStore(params).asInstanceOf[AccumuloDataStore]
-      ds.cachingConfig must beTrue
+      ds.cachingConfig must beFalse
     }
 
     "not use caching by default with mocks" in {

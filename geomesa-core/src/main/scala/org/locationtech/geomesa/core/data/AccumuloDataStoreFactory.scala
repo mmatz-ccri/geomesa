@@ -122,10 +122,11 @@ class AccumuloDataStoreFactory extends DataStoreFactorySpi {
         .map(FeatureEncoding.withName)
         .getOrElse(FeatureEncoding.AVRO)
 
+    // stats defaults to true if not specified
     val collectStats = !useMock &&
-        Option(statsParam.lookUp(params).asInstanceOf[java.lang.Boolean]).forall(_ == true)
-    val caching =
-      Option(cachingParam.lookUp(params).asInstanceOf[java.lang.Boolean]).getOrElse(!useMock) == true
+        Option(statsParam.lookUp(params)).map(_.toString.toBoolean).forall(_ == true)
+    // caching defaults to false if not specified
+    val caching = Option(cachingParam.lookUp(params)).exists(_.toString.toBoolean)
 
     if (collectStats) {
       new AccumuloDataStore(connector,
