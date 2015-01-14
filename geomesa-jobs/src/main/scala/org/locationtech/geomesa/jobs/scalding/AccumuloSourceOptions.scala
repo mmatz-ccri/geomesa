@@ -34,7 +34,9 @@ case class AccumuloSourceOptions(
     user: String,
     password: String,
     input: AccumuloInputOptions,
-    output: AccumuloOutputOptions)
+    output: AccumuloOutputOptions) {
+  override val toString = s"AccumuloSourceOptions[$instance,$zooKeepers,$input,$output]"
+}
 
 case class AccumuloInputOptions(
     table: String,
@@ -46,14 +48,18 @@ case class AccumuloInputOptions(
     localIterators: Option[Boolean] = None,
     offlineTableScan: Option[Boolean] = None,
     scanIsolation: Option[Boolean] = None,
-    logLevel: Option[Level] = None)
+    logLevel: Option[Level] = None) {
+  override val toString = s"AccumuloInputOptions[$table]"
+}
 
 case class AccumuloOutputOptions(
     table: String,
     threads: Option[Int] = None,
     memory: Option[Long] = None,
     createTable: Boolean = false,
-    logLevel: Option[Level] = None)
+    logLevel: Option[Level] = None) {
+  override val toString = s"AccumuloOutputOptions[$table]"
+}
 
 case class SerializedRange(start: Endpoint, end: Endpoint)
 

@@ -78,7 +78,7 @@ class SortedIndexUpdateJob(args: Args) extends GeoMesaBaseJob(args) {
           newKeys.map { case (r: Text, keys: List[(Key, Value)]) =>
             val mutation = new Mutation(r)
             keys.foreach { case (k: Key, v: Value) =>
-              mutation.put(k.getColumnFamily, k.getColumnQualifier, k.getColumnVisibilityParsed, v)
+              mutation.put(k.getColumnFamily, k.getColumnQualifier, visibility, v)
             }
             mutation
           }
@@ -97,13 +97,14 @@ class SortedIndexUpdateJob(args: Args) extends GeoMesaBaseJob(args) {
       // schedule a table compaction to remove the deleted entries
       val ds = DataStoreFinder.getDataStore(params.asJava).asInstanceOf[AccumuloDataStore]
       ds.connector.tableOperations().compact(stIndexTable, null, null, true, false)
+      ds.setIndexSchemaFmt(feature, ds.buildDefaultSpatioTemporalSchema(feature))
       ds.setGeomesaVersion(feature, INTERNAL_GEOMESA_VERSION)
     }
     result
   }
 
   class SortedIndexUpdateResources extends GeoMesaResources {
-    val indexSchemaFmt = ds.getIndexSchemaFmt(sft.getTypeName)
+    val indexSchemaFmt = ds.buildDefaultSpatioTemporalSchema(sft.getTypeName)
     val encoding = ds.getFeatureEncoding(sft)
     val fe = SimpleFeatureEncoder(sft, encoding)
     val encoder = IndexSchema.buildKeyEncoder(indexSchemaFmt, fe)

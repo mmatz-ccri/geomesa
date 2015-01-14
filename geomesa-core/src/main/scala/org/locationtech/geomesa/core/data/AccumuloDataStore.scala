@@ -96,7 +96,7 @@ class AccumuloDataStore(val connector: Connector,
   private val MIN_QUERY_THREADS = 5
 
   // equivalent to: s"%~#s%$maxShard#r%${name}#cstr%0,3#gh%yyyyMMdd#d::%~#s%3,2#gh::%~#s%#id"
-  private def buildDefaultSpatioTemporalSchema(name: String, maxShard: Int) =
+  def buildDefaultSpatioTemporalSchema(name: String, maxShard: Int = DEFAULT_MAX_SHARD): String =
     new IndexSchemaBuilder("~")
       .randomNumber(maxShard)
       .indexOrDataFlag()
@@ -620,6 +620,16 @@ class AccumuloDataStore(val connector: Connector,
    */
   def getIndexSchemaFmt(featureName: String) =
     metadata.read(featureName, SCHEMA_KEY).getOrElse(EMPTY_STRING)
+
+  /**
+   * Updates the index schema format - WARNING don't use this unless you know what you're doing.
+   * @param sft
+   * @param schema
+   */
+  def setIndexSchemaFmt(sft: String, schema: String) = {
+    metadata.insert(sft, SCHEMA_KEY, schema)
+    metadata.expireCache(sft)
+  }
 
   /**
    * Gets the internal geomesa version number for a given feature type
