@@ -67,7 +67,7 @@ package object csv extends Logging {
   def guessTypes(name: String,
                  csvReader: Reader,
                  hasHeader: Boolean = true,
-                 format: CSVFormat = CSVFormat.DEFAULT): TypeSchema = {
+                 format: CSVFormat = CSVFormat.DEFAULT): csv.TypeSchema = {
     val records = format.parse(csvReader).iterator
     val (header, record) = sampleRecords(records, hasHeader)
     val typeChars = typeData(record.iterator)
@@ -96,10 +96,10 @@ package object csv extends Logging {
         sftb.stringType(field)
     }}
 
-    TypeSchema(name, sftb.getSpec())
+    csv.TypeSchema(name, sftb.getSpec())
   }
 
-  def guessTypes(csvFile: File, hasHeader: Boolean): TypeSchema = {
+  def guessTypes(csvFile: File, hasHeader: Boolean): csv.TypeSchema = {
     val typename = FilenameUtils.getBaseName(csvFile.getName)
     val reader = Source.fromFile(csvFile).bufferedReader()
     val guess = guessTypes(typename, reader, hasHeader)

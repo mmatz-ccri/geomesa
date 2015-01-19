@@ -52,7 +52,7 @@ class RasterStoreQueryIntegratedTest extends Specification {
       val theStore = RasterUtils.createRasterStore(tableName)
 
       // populate store
-      val testRaster = RasterUtils.generateTestRaster(0, 50, 0, 50)
+      val testRaster = RasterUtils.generateTestRaster(0, 50, 0, 50, 256, 256, 10.0)
       theStore.putRaster(testRaster)
 
       //generate query
@@ -69,7 +69,7 @@ class RasterStoreQueryIntegratedTest extends Specification {
       val rasterStore = RasterUtils.createRasterStore(tableName)
 
       // general setup
-      val testRaster = RasterUtils.generateTestRasterFromGeoHash(GeoHash("s"))
+      val testRaster = RasterUtils.generateTestRasterFromGeoHash(GeoHash("s"), res = 10.0)
       rasterStore.putRaster(testRaster)
 
       //generate query
@@ -86,7 +86,7 @@ class RasterStoreQueryIntegratedTest extends Specification {
       val rasterStore = RasterUtils.createRasterStore(tableName)
 
       // general setup
-      val testRaster = RasterUtils.generateTestRasterFromGeoHash(GeoHash("d"))
+      val testRaster = RasterUtils.generateTestRasterFromGeoHash(GeoHash("d"), res = 10.0)
       rasterStore.putRaster(testRaster)
 
       //generate query
@@ -102,9 +102,9 @@ class RasterStoreQueryIntegratedTest extends Specification {
       val rasterStore = RasterUtils.createRasterStore(tableName)
 
       // general setup
-      val testRaster1 = RasterUtils.generateTestRasterFromGeoHash(GeoHash("s"))
+      val testRaster1 = RasterUtils.generateTestRasterFromGeoHash(GeoHash("s"), res = 10.0)
       rasterStore.putRaster(testRaster1)
-      val testRaster2 = RasterUtils.generateTestRasterFromGeoHash(GeoHash("d"))
+      val testRaster2 = RasterUtils.generateTestRasterFromGeoHash(GeoHash("d"), res = 10.0)
       rasterStore.putRaster(testRaster2)
 
       //generate query
@@ -139,7 +139,7 @@ class RasterStoreQueryIntegratedTest extends Specification {
       val gh = GeoHash("dqcjr")
       val env = gh.getEnvelopeInternal
       val inG = gh.geom.buffer(-0.0001).getEnvelopeInternal
-      val testRaster = RasterUtils.generateTestRaster(inG.getMinX, inG.getMaxX, inG.getMinY, inG.getMaxY)
+      val testRaster = RasterUtils.generateTestRaster(inG.getMinX, inG.getMaxX, inG.getMinY, inG.getMaxY, 256, 256, 10.0)
       rasterStore.putRaster(testRaster)
 
       //generate query
@@ -158,11 +158,27 @@ class RasterStoreQueryIntegratedTest extends Specification {
       val gh = GeoHash("dqcjr")
       val env = gh.getEnvelopeInternal
       val inG = gh.geom.buffer(0.0001).getEnvelopeInternal
-      val testRaster = RasterUtils.generateTestRaster(inG.getMinX, inG.getMaxX, inG.getMinY, inG.getMaxY)
+      val testRaster = RasterUtils.generateTestRaster(inG.getMinX, inG.getMaxX, inG.getMinY, inG.getMaxY, 256, 256, 10.0)
       rasterStore.putRaster(testRaster)
 
       //generate query
       val query = RasterUtils.generateQuery(env.getMinX-0.0001, env.getMaxX+0.0001, env.getMinY-0.0001, env.getMaxY+0.0001)
+
+      rasterStore must beAnInstanceOf[RasterStore]
+      val theResults = rasterStore.getRasters(query).toList
+      theResults.length must beEqualTo(1)
+    }
+
+    "Properly return another raster slightly larger than a GeoHash via a query bbox" in {
+      val tableName = getNewIteration()
+      val rasterStore = RasterUtils.createRasterStore(tableName)
+
+      // general setup
+      val testRaster = RasterUtils.generateTestRaster(-0.1757812, 22.5000000,-90.0000000,-67.3242188, 129,129)
+      rasterStore.putRaster(testRaster)
+
+      //generate query
+      val query = RasterUtils.generateQuery(testRaster.referencedEnvelope,testRaster.resolution)
 
       rasterStore must beAnInstanceOf[RasterStore]
       val theResults = rasterStore.getRasters(query).toList
@@ -191,16 +207,16 @@ class RasterStoreQueryIntegratedTest extends Specification {
 
       // general setup
       val bbox1 = GeoHash("7").bbox
-      val testRaster1 = RasterUtils.generateTestRasterFromBoundingBox(bbox1)
+      val testRaster1 = RasterUtils.generateTestRasterFromBoundingBox(bbox1, 256,256,10.0)
       rasterStore.putRaster(testRaster1)
       val bbox2 = GeoHash("k").bbox
-      val testRaster2 = RasterUtils.generateTestRasterFromBoundingBox(bbox2)
+      val testRaster2 = RasterUtils.generateTestRasterFromBoundingBox(bbox2,256,256,10.0)
       rasterStore.putRaster(testRaster2)
       val bbox3 = GeoHash("s").bbox
-      val testRaster3 = RasterUtils.generateTestRasterFromBoundingBox(bbox3)
+      val testRaster3 = RasterUtils.generateTestRasterFromBoundingBox(bbox3,256,256,10.0)
       rasterStore.putRaster(testRaster3)
       val bbox4 = GeoHash("e").bbox
-      val testRaster4 = RasterUtils.generateTestRasterFromBoundingBox(bbox4)
+      val testRaster4 = RasterUtils.generateTestRasterFromBoundingBox(bbox4,256,256,10.0)
       rasterStore.putRaster(testRaster4)
 
       //generate query
@@ -217,16 +233,16 @@ class RasterStoreQueryIntegratedTest extends Specification {
 
       // general setup
       val bbox1 = GeoHash("dqb0m").bbox
-      val testRaster1 = RasterUtils.generateTestRasterFromBoundingBox(bbox1)
+      val testRaster1 = RasterUtils.generateTestRasterFromBoundingBox(bbox1,256,256,10.0)
       rasterStore.putRaster(testRaster1)
       val bbox2 = GeoHash("dqb0q").bbox
-      val testRaster2 = RasterUtils.generateTestRasterFromBoundingBox(bbox2)
+      val testRaster2 = RasterUtils.generateTestRasterFromBoundingBox(bbox2,256,256,10.0)
       rasterStore.putRaster(testRaster2)
       val bbox3 = GeoHash("dqb0w").bbox
-      val testRaster3 = RasterUtils.generateTestRasterFromBoundingBox(bbox3)
+      val testRaster3 = RasterUtils.generateTestRasterFromBoundingBox(bbox3,256,256,10.0)
       rasterStore.putRaster(testRaster3)
       val bbox4 = GeoHash("dqb0t").bbox
-      val testRaster4 = RasterUtils.generateTestRasterFromBoundingBox(bbox4)
+      val testRaster4 = RasterUtils.generateTestRasterFromBoundingBox(bbox4,256,256,10.0)
       rasterStore.putRaster(testRaster4)
 
       //generate query

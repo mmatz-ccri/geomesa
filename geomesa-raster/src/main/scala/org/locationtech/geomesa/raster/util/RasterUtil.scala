@@ -142,25 +142,77 @@ object RasterUtils {
     val bb = BoundingBox(new ReferencedEnvelope(minX, maxX, minY, maxY, DefaultGeographicCRS.WGS84))
     new RasterQuery(bb, res, None, None)
   }
+  //TODO: WCS: refactor this to use the above
+  def generateQuery(refEnv: ReferencedEnvelope, res: Double) = {
+    val bb = BoundingBox(refEnv)
+    new RasterQuery(bb, res, None, None)
+  }
 
-  def generateTestRaster(minX: Double, maxX: Double, minY: Double, maxY: Double, w: Int = 256, h: Int = 256, res: Double = 10.0): Raster = {
-    val ingestTime = new DateTime()
-    val env = new ReferencedEnvelope(minX, maxX, minY, maxY, DefaultGeographicCRS.WGS84)
-    val bbox = BoundingBox(env)
-    val metadata = DecodedIndex(Raster.getRasterId("testRaster"), bbox.geom, Option(ingestTime.getMillis))
+  /**
+  def generateQuery(minX: Double, maxX: Double, minY: Double, maxY: Double, w: Int = 256, h: Int = 256, res: Double = 10.0) = {
+    val bb = BoundingBox(new ReferencedEnvelope(minX, maxX, minY, maxY, DefaultGeographicCRS.WGS84))
+    new RasterQuery(bb, res, None, None)
+
+
+      val gridGeometry = new GridGeometry2D
+      val envelope = gridGeometry.getEnvelope
+      val bbox = BoundingBox(envelope)
+
+      val rasterParams = RasterUtils.sharedRasterParams(gridGeometry, envelope)
+
+      val accumuloResolution = rasterParams.accumuloResolution
+
+
+      def toRasterQuery: RasterQuery = RasterQuery(bbox, accumuloResolution, None, None)
+
+
+
+  }
+  **/
+  def generateTestCoverage(env: ReferencedEnvelope, w: Int = 256, h: Int = 256) = {
     val image = getNewImage(w, h, Array[Int](255, 255, 255))
-    val coverage = imageToCoverage(image.getRaster, env, defaultGridCoverageFactory)
+    imageToCoverage(image.getRaster, env, defaultGridCoverageFactory)
+  }
+
+  def generateTestMetaData(env: ReferencedEnvelope) = {
+    val ingestTime = new DateTime()
+    val bbox = BoundingBox(env)
+    DecodedIndex(Raster.getRasterId("testRaster"), bbox.geom, Option(ingestTime.getMillis))
+  }
+
+  def generateTestRaster(minX: Double, maxX: Double, minY: Double, maxY: Double, w: Int , h: Int , res: Double): Raster = {
+    val env = new ReferencedEnvelope(minX, maxX, minY, maxY, DefaultGeographicCRS.WGS84)
+    val coverage = generateTestCoverage(env,w,h)
+    val metadata = generateTestMetaData(env)
     new Raster(coverage.getRenderedImage, metadata, res)
   }
 
-  def generateTestRasterFromBoundingBox(bbox: BoundingBox, w: Int = 256, h: Int = 256, res: Double = 10.0): Raster = {
+  def generateTestRaster(minX: Double, maxX: Double, minY: Double, maxY: Double, w: Int, h: Int): Raster = {
+    val env = new ReferencedEnvelope(minX, maxX, minY, maxY, DefaultGeographicCRS.WGS84)
+    val coverage = generateTestCoverage(env,w,h)
+    val metadata = generateTestMetaData(env)
+    val res =  sharedRasterParams(coverage.getGridGeometry, env).accumuloResolution
+    new Raster(coverage.getRenderedImage, metadata, res)
+  }
+
+  def generateTestRasterFromBoundingBox(bbox: BoundingBox, w: Int = 256, h: Int = 256 ): Raster = {
+    generateTestRaster(bbox.minLon, bbox.maxLon, bbox.minLat, bbox.maxLat, w, h)
+  }
+  def generateTestRasterFromBoundingBox(bbox: BoundingBox, w: Int , h: Int , res:Double): Raster = {
     generateTestRaster(bbox.minLon, bbox.maxLon, bbox.minLat, bbox.maxLat, w, h, res)
   }
 
-  def generateTestRasterFromGeoHash(gh: GeoHash, w: Int = 256, h: Int = 256, res: Double = 10.0): Raster = {
+  def generateTestRasterFromGeoHash(gh: GeoHash, w: Int = 256, h: Int = 256): Raster = {
+    generateTestRasterFromBoundingBox(gh.bbox, w, h)
+  }
+
+  def generateTestRasterFromGeoHash(gh: GeoHash, w: Int , h: Int , res:Double): Raster = {
     generateTestRasterFromBoundingBox(gh.bbox, w, h, res)
   }
 
+  def generateTestRasterFromGeoHash(gh: GeoHash, res:Double): Raster = {
+    generateTestRasterFromBoundingBox(gh.bbox, 256, 256 , res)
+  }
   case class sharedRasterParams(gg: GridGeometry2D, envelope: Envelope) {
     val width = gg.getGridRange2D.getWidth
     val height = gg.getGridRange2D.getHeight
