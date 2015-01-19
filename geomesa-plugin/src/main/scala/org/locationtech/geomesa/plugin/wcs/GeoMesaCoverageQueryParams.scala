@@ -41,12 +41,12 @@ class GeoMesaCoverageQueryParams(parameters: Array[GeneralParameterValue]) {
   val height = rasterParams.height
   val resX = rasterParams.resX
   val resY = rasterParams.resY
-  val accumuloResolution = rasterParams.accumuloResolution
+  val suggestedQueryResolution = rasterParams.suggestedQueryResolution
   val min = Array(Math.max(envelope.getMinimum(0), -180) + .00000001,
                   Math.max(envelope.getMinimum(1), -90) + .00000001)
   val max = Array(Math.min(envelope.getMaximum(0), 180) - .00000001,
                   Math.min(envelope.getMaximum(1), 90) - .00000001)
   val bbox = BoundingBox(Bounds(min(0), max(0)), Bounds(min(1), max(1)))
 
-  def toRasterQuery: RasterQuery = RasterQuery(bbox, accumuloResolution, None, None)
+  def toRasterQuery: RasterQuery = RasterQuery(bbox, suggestedQueryResolution, None, None)
 }

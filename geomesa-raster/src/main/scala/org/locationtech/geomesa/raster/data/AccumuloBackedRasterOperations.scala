@@ -79,7 +79,7 @@ class AccumuloBackedRasterOperations(val connector: Connector,
   // TODO: WCS: GEOMESA-585 Add ability to use arbitrary schemas
   val schema = RasterIndexSchema("")
 
-  lazy val queryPlanner: AccumuloRasterQueryPlanner = new AccumuloRasterQueryPlanner(schema)
+  lazy val queryPlanner: AccumuloRasterQueryPlanner = new AccumuloRasterQueryPlanner(schema, getAvailableResolutions.toList)
 
   private val tableOps = connector.tableOperations()
   private val securityOps = connector.securityOperations
@@ -128,6 +128,7 @@ class AccumuloBackedRasterOperations(val connector: Connector,
     }
   }
 
+  // TODO: Consider adding resolutions + extent info  https://geomesa.atlassian.net/browse/GEOMESA-645
   def getAvailableResolutions(): Set[Double] = {
     ensureTableExists(GEOMESA_RASTER_BOUNDS_TABLE)
     val scanner = connector.createScanner(GEOMESA_RASTER_BOUNDS_TABLE, getAuths())
