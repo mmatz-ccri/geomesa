@@ -16,6 +16,8 @@
 
 package org.locationtech.geomesa
 
+import java.math.{RoundingMode, MathContext}
+
 import org.calrissian.mango.types.LexiTypeEncoders
 
 /**
@@ -34,11 +36,15 @@ import org.calrissian.mango.types.LexiTypeEncoders
  * we save only four digits after the decimal point.
  */
 package object raster {
-  // Sets the rounding mode to use floor() in order to minimize effects from round-off at higher precisions
-  val roundingMode =  BigDecimal.RoundingMode.FLOOR
 
-  // this sets the scale for the floor() function and thus determines where the truncation occurs
+  // Sets the rounding mode to use floor() in order to minimize effects from round-off at higher precisions
+  val roundingMode =  RoundingMode.FLOOR
+
+  // Sets the scale for the floor() function and thus determines where the truncation occurs
   val significantDigits = 4
+
+  // Defines the rules for rounding using the above
+  val mc = new MathContext(significantDigits, roundingMode)
 
   /**
    * The double, number, is truncated to a certain number of significant digits and then lexiEncoded into
@@ -46,7 +52,7 @@ package object raster {
    * @param number, the Double to be lexiEncoded
    */
   def lexiEncodeDoubleToString(number: Double): String = {
-    val truncatedRes = BigDecimal(number).setScale(significantDigits, roundingMode).toDouble
+    val truncatedRes = BigDecimal(number).round(mc).toDouble
     LexiTypeEncoders.LEXI_TYPES.encode(truncatedRes)
   }
 
@@ -57,6 +63,6 @@ package object raster {
    */
   def lexiDecodeStringToDouble(str: String): Double = {
     val number = LexiTypeEncoders.LEXI_TYPES.decode("double", str).asInstanceOf[Double]
-    BigDecimal(number).setScale(significantDigits, roundingMode).toDouble
+    BigDecimal(number).round(mc).toDouble
   }
 }
