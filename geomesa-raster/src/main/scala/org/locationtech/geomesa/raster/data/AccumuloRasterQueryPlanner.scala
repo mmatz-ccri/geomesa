@@ -70,21 +70,26 @@ case class AccumuloRasterQueryPlanner(schema: RasterIndexSchema, availableResolu
     lexiEncodeDoubleToString(getResolution(suggestedResolution))
 
   def getResolution(suggestedResolution: Double): Double = {
+    // TODO: Change to logging
     println(s"JNH: getResolution: $suggestedResolution availableResolutions: $availableResolutions")
 
-    if (availableResolutions.length == 1) availableResolutions.head
+    val ret = if (availableResolutions.length == 1) availableResolutions.head
     else if (availableResolutions.isEmpty) 1.0 // Really?
     else {
-
       val lowerResolutions = availableResolutions.filter(_ <= suggestedResolution)
 
       println(s"JNH: $lowerResolutions")
 
       lowerResolutions match {
         case Nil => availableResolutions.min
-        case _ => lowerResolutions.sorted.max
+        case _ => lowerResolutions.max
       }
     }
+    println(s"getResolution $suggestedResolution\n" +
+            s"availableResolutions: ${availableResolutions.sorted}\n" +
+            s"Returned resolution: $ret"
+    )
+    ret
   }
 
   def constructFilter(ref: ReferencedEnvelope, featureType: SimpleFeatureType): Filter = {

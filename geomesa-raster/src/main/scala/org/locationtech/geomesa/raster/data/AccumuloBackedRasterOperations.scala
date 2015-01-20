@@ -109,9 +109,10 @@ class AccumuloBackedRasterOperations(val connector: Connector,
   def getRasters(rasterQuery: RasterQuery): Iterator[Raster] = {
     //TODO: WCS: Abstract number of threads
     val numQThreads = 20
-    val batchScanner = connector.createBatchScanner(rasterTable, authorizationsProvider.getAuthorizations, numQThreads)
+    //val batchScanner = connector.createBatchScanner(rasterTable, authorizationsProvider.getAuthorizations, numQThreads)
+    val scanner = connector.createScanner(rasterTable,  authorizationsProvider.getAuthorizations)
     val plan = queryPlanner.getQueryPlan(rasterQuery)
-    configureBatchScanner(batchScanner, plan)
+    configureBatchScanner(scanner, plan)
     adaptIterator(batchScanner.iterator)
   }
 
