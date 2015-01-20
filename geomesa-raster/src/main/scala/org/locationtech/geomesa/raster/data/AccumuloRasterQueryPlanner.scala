@@ -31,7 +31,7 @@ case class AccumuloRasterQueryPlanner(schema: RasterIndexSchema) extends Logging
     val closestAcceptableGeoHash = GeohashUtils.getClosestAcceptableGeoHash(rq.bbox).getOrElse(GeoHash("")).hash
     val hashes = (BoundingBox.getGeoHashesFromBoundingBox(rq.bbox) :+ closestAcceptableGeoHash).toSet.toList
     val res = lexiEncodeDoubleToString(rq.resolution)
-    logger.debug(s"Planner: BBox: ${rq.bbox} has geohashes: $hashes, and has encoded Resolution: $res")
+    logger.debug(s"Planner: BBox: ${rq.bbox} has geohashes: $hashes, and has raw/encoded Resolution: ${rq.resolution} / $res")
 
     val rows = hashes.map { gh =>
       // TODO: leverage the RasterIndexSchema to construct the range.

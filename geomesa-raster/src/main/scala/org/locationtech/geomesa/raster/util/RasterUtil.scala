@@ -191,7 +191,8 @@ object RasterUtils {
     val env = new ReferencedEnvelope(minX, maxX, minY, maxY, DefaultGeographicCRS.WGS84)
     val coverage = generateTestCoverage(env,w,h)
     val metadata = generateTestMetaData(env)
-    val res =  sharedRasterParams(coverage.getGridGeometry, env).accumuloResolution
+    val env2 = coverage.getEnvelope2D
+    val res =  sharedRasterParams(coverage.getGridGeometry, env2).accumuloResolution
     new Raster(coverage.getRenderedImage, metadata, res)
   }
 
