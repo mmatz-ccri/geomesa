@@ -27,7 +27,7 @@ class RasterFormattersTest extends Specification {
     val testNumber = 123456789
     val doubleFormatter = DoubleTextFormatter(testNumber)
 
-    "map a double to a string representation" in {
+    "map a double to a string representation using only four significant digits" in {
       val scientificText = doubleFormatter.formatString(null, null, null)
       scientificText must be equalTo "c19d6bbd00000000"
     }
