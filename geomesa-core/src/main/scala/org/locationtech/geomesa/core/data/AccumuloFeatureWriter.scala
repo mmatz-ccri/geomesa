@@ -30,6 +30,7 @@ import org.geotools.filter.identity.FeatureIdImpl
 import org.locationtech.geomesa.core.data.AccumuloFeatureWriter.FeatureWriterFn
 import org.locationtech.geomesa.core.data.tables.{AttributeTable, RecordTable, SpatioTemporalTable}
 import org.locationtech.geomesa.core.index._
+import org.locationtech.geomesa.core.security
 import org.locationtech.geomesa.feature.{AvroSimpleFeature, AvroSimpleFeatureFactory, SimpleFeatureEncoder}
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
@@ -120,7 +121,7 @@ abstract class AccumuloFeatureWriter(featureType: SimpleFeatureType,
       }
       else feature
 
-    val perFeatureVisibility = feature.getUserData.getOrElse(VISIBILITIES_KEY, visibility).asInstanceOf[String]
+    val perFeatureVisibility = feature.getUserData.getOrElse(security.SecurityUtils.FEATURE_VISIBILITY, visibility).asInstanceOf[String]
 
     // require non-null geometry to write to geomesa (can't index null geo)
     if (toWrite.getDefaultGeometry != null) {
@@ -201,7 +202,7 @@ class ModifyAccumuloFeatureWriter(featureType: SimpleFeatureType,
   import scala.collection.JavaConversions._
   override def remove() =
     if (original != null) {
-      removers.foreach { r => r(original, original.getUserData.getOrElse(VISIBILITIES_KEY, visibility).asInstanceOf[String]) }
+      removers.foreach { r => r(original, original.getUserData.getOrElse(security.SecurityUtils.FEATURE_VISIBILITY, visibility).asInstanceOf[String]) }
     }
 
   override def hasNext = reader.hasNext

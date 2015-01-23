@@ -44,6 +44,7 @@ import org.joda.time.DateTime
 import org.junit.runner.RunWith
 import org.locationtech.geomesa.core.index._
 import org.locationtech.geomesa.core.iterators.{IndexIterator, TestData}
+import org.locationtech.geomesa.core.security
 import org.locationtech.geomesa.core.security.{AuthorizationsProvider, DefaultAuthorizationsProvider, FilteringAuthorizationsProvider}
 import org.locationtech.geomesa.core.util.{CloseableIterator, SelfClosingIterator}
 import org.locationtech.geomesa.feature.AvroSimpleFeatureFactory
@@ -754,7 +755,6 @@ class AccumuloDataStoreTest extends Specification {
         "tableName"         -> "testwrite",
         "useMock"           -> "true",
         "featureEncoding"   -> "avro")).asInstanceOf[AccumuloDataStore]
-      ds should not be nulluser
 
       val sftName = "perfeatureauthtest"
       val sft = SimpleFeatureTypes.createType(sftName, s"name:String,dtg:Date,*geom:Point:srid=4326")
@@ -766,15 +766,19 @@ class AccumuloDataStoreTest extends Specification {
 
       val features = getFeatures(sft).toList
       val privFeatures = features.take(3)
-      privFeatures.foreach { f => f.getUserData.put(VISIBILITIES_KEY, "user&admin") }
+      privFeatures.foreach { f => f.getUserData.put(security.SecurityUtils.FEATURE_VISIBILITY, "user&admin") }
 
       val nonPrivFeatures = features.drop(3)
-      nonPrivFeatures.foreach { f => f.getUserData.put(VISIBILITIES_KEY, "user") }
+      nonPrivFeatures.foreach { f => f.getUserData.put(security.SecurityUtils.FEATURE_VISIBILITY, "user") }
 
       fs.addFeatures(new ListFeatureCollection(sft, privFeatures ++ nonPrivFeatures))
       fs.flush()
 
-      "nonpriv should only be able to read 3 features" >> {
+      val ff = CommonFactoryFinder.getFilterFactory2
+      import ff._
+      import ff.{ property => prop, literal => lit }
+
+      "nonpriv should only be able to read a subset of features" >> {
         val unprivDS = DataStoreFinder.getDataStore(Map(
           "instanceId"        -> "perfeatureinstance",
           "zookeepers"        -> "zoo1:2181,zoo2:2181,zoo3:2181",
@@ -784,16 +788,51 @@ class AccumuloDataStoreTest extends Specification {
           "useMock"           -> "true",
           "featureEncoding"   -> "avro")).asInstanceOf[AccumuloDataStore]
 
-        val reader = unprivDS.getFeatureReader(sftName, Query.ALL)
-        val readFeatures = reader.getIterator.toList
+        "using ALL queries" >> {
+          val reader = unprivDS.getFeatureReader(sftName, Query.ALL)
+          val readFeatures = reader.getIterator.toList
 
-        readFeatures.size must be equalTo 3
+          readFeatures.size must be equalTo 3
+        }
+
+        "using ST queries" >> {
+          val filter = bbox(prop("geom"), 44.0, 44.0, 46.0, 46.0, "EPSG:4326")
+          val reader = unprivDS.getFeatureReader(new Query(sftName, filter), Transaction.AUTO_COMMIT)
+          reader.getIterator.toList.size must be equalTo 3
+        }
+
+        "using attribute queries" >> {
+          val filter = or(
+            ff.equals(prop("name"), lit("1")),
+            ff.equals(prop("name"), lit("4")))
+
+          val reader = unprivDS.getFeatureReader(new Query(sftName, filter), Transaction.AUTO_COMMIT)
+          reader.getIterator.toList.size must be equalTo 1
+        }
+
       }
 
       "priv should be able to read all 6 features" >> {
-        val reader = ds.getFeatureReader(sftName, Query.ALL)
-        val readFeatures = reader.getIterator.toList
-        readFeatures.size must be equalTo 6
+
+        "using ALL queries" >> {
+          val reader = ds.getFeatureReader(sftName, Query.ALL)
+          val readFeatures = reader.getIterator.toList
+          readFeatures.size must be equalTo 6
+        }
+        "using ST queries" >> {
+          val filter = bbox(prop("geom"), 44.0, 44.0, 46.0, 46.0, "EPSG:4326")
+          val reader = ds.getFeatureReader(new Query(sftName, filter), Transaction.AUTO_COMMIT)
+          reader.getIterator.toList.size must be equalTo 6
+        }
+
+        "using attribute queries" >> {
+          val filter = or(
+            ff.equals(prop("name"), lit("1")),
+            ff.equals(prop("name"), lit("4")))
+
+          val reader = ds.getFeatureReader(new Query(sftName, filter), Transaction.AUTO_COMMIT)
+          reader.getIterator.toList.size must be equalTo 2
+        }
       }
     }
 
@@ -1166,7 +1205,7 @@ class AccumuloDataStoreTest extends Specification {
         builder.set("name", i.toString)
         builder.set("attr2", "2-" + i.toString)
         val sf = builder.buildFeature(i.toString)
-        sf.getUserData().update(Hints.USE_PROVIDED_FID, java.lang.Boolean.TRUE)
+        sf.getUserData.update(Hints.USE_PROVIDED_FID, java.lang.Boolean.TRUE)
         sf
       }
 
@@ -1213,7 +1252,7 @@ class AccumuloDataStoreTest extends Specification {
         builder.set("name", i.toString)
         builder.set("attr2", "2-" + i.toString)
         val sf = builder.buildFeature(i.toString)
-        sf.getUserData().update(Hints.USE_PROVIDED_FID, java.lang.Boolean.TRUE)
+        sf.getUserData.update(Hints.USE_PROVIDED_FID, java.lang.Boolean.TRUE)
         sf
       }
 

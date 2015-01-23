@@ -43,7 +43,7 @@ class AccumuloFeatureStore(val dataStore: AccumuloDataStore, val featureName: Na
       writeBounds(collection.getBounds)
       writeTimeBounds(collection)
 
-      val fw = dataStore.getFeatureWriter(featureName.getLocalPart, Transaction.AUTO_COMMIT)
+      val fw = dataStore.getFeatureWriterAppend(featureName.getLocalPart, Transaction.AUTO_COMMIT)
 
       val iter = collection.features()
       while(iter.hasNext) {
