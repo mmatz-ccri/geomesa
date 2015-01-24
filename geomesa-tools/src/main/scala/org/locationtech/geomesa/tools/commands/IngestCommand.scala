@@ -26,9 +26,10 @@ import org.locationtech.geomesa.tools.ingest.{DelimitedIngest, ShpIngest}
 import scala.collection.JavaConversions._
 
 class IngestCommand(parent: JCommander) extends Command with Logging {
+  override val command = "ingest"
 
   val params = new IngestParameters()
-  parent.addCommand(Command, params)
+  parent.addCommand(command, params)
 
   override def execute(): Unit = {
     val fmt = Option(params.format).getOrElse(getFileExtension(params.files(0)))
@@ -44,8 +45,6 @@ class IngestCommand(parent: JCommander) extends Command with Logging {
 }
 
 object IngestCommand {
-  val Command = "ingest"
-
   @Parameters(commandDescription = "Ingest a file of various formats into GeoMesa")
   class IngestParameters extends CreateFeatureParams {
     @Parameter(names = Array("-is", "--index-schema"), description = "GeoMesa index schema format string")

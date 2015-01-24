@@ -24,9 +24,10 @@ import org.locationtech.geomesa.tools.Runner.commandUsage
 import scala.collection.JavaConversions._
 
 class HelpCommand(parent: JCommander) extends Command {
+  override val command = "help"
 
   val params = new HelpParameters
-  parent.addCommand(HelpCommand.Command, params)
+  parent.addCommand(command, params)
 
   override def execute(): Unit =
     params.commandName.headOption match {
@@ -38,8 +39,6 @@ class HelpCommand(parent: JCommander) extends Command {
 }
 
 object HelpCommand {
-  val Command = "help"
-
   @Parameters(commandDescription = "Show help")
   class HelpParameters {
     @Parameter(description = "commandName", required = false)

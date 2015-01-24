@@ -25,9 +25,10 @@ import org.opengis.feature.`type`.AttributeDescriptor
 import scala.collection.JavaConversions._
 
 class DescribeCommand(parent: JCommander) extends Command with Logging {
+  override val command = "describe"
 
   val params = new DescribeParameters
-  parent.addCommand(Command, params)
+  parent.addCommand(command, params)
 
   def execute() = {
     logger.info(s"Describing attributes of feature '${params.featureName}' from catalog table '${params.catalog}'...")
@@ -66,8 +67,6 @@ class DescribeCommand(parent: JCommander) extends Command with Logging {
 }
 
 object DescribeCommand {
-  val Command = "describe"
-
   @Parameters(commandDescription = "Describe the attributes of a given feature in GeoMesa")
   class DescribeParameters extends FeatureParams {}
 }

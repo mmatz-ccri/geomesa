@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Commonwealth Computer Research, Inc.
+ * Copyright 2015 Commonwealth Computer Research, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,15 @@
  */
 package org.locationtech.geomesa.tools.commands
 
-trait Command {
-  def execute()
-  val command: String
-}
+object PromptConfirm {
 
+  def confirm(msg: String, confirmStrings: List[String] = List("yes", "y")) =
+    if (System.console() != null) {
+      print(msg)
+      confirmStrings.map(_.toLowerCase).contains(System.console.readLine.toLowerCase.trim)
+    } else {
+      throw new IllegalStateException("Unable to confirm deletion via console..." +
+        "Please ensure stdout is not redirected or --force flag is set")
+    }  
+
+}

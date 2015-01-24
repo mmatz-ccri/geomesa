@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Commonwealth Computer Research, Inc.
+ * Copyright 2015 Commonwealth Computer Research, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.locationtech.geomesa.tools.commands
+package org.locationtech.geomesa.tools.commands.convert
 
-trait Command {
-  def execute()
-  val command: String
+import java.util.regex.Pattern
+
+import com.beust.jcommander.IStringConverter
+
+class JPatternConverter extends IStringConverter[Pattern] {
+  override def convert(value: String): Pattern = Pattern.compile(value)
 }
-

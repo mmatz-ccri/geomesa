@@ -17,63 +17,86 @@ package org.locationtech.geomesa.tools.commands
 
 import java.util.regex.Pattern
 
-import com.beust.jcommander.{JCommander, Parameter, Parameters}
+import com.beust.jcommander.{JCommander, Parameters, ParametersDelegate}
 import com.typesafe.scalalogging.slf4j.Logging
+import org.locationtech.geomesa.core.data.AccumuloDataStore
 import org.locationtech.geomesa.tools.DataStoreHelper
-import org.locationtech.geomesa.tools.commands.DeleteFeatureCommand._
+import org.locationtech.geomesa.tools.commands.DeleteFeatureCommand.{promptConfirm, _}
 
 class DeleteFeatureCommand(parent: JCommander) extends Command with Logging {
+  override val command = "delete-feature"
 
-  val params = new DeleteParams
-  parent.addCommand(Command, params)
+  val params = new DeleteFeatureParams
+  parent.addCommand(command, params)
 
   override def execute() = {
-    val feature = params.featureName
     val catalog = params.catalog
+    val ds = new DataStoreHelper(params).ds
+    val features = determineFeatures(params.pattern, catalog, params.featureName, ds)
+    validate(features, ds)
 
-    if (params.forceDelete || promptConfirm(feature, catalog)) {
-      logger.info(s"Deleting '$catalog:$feature'")
-      try {
-        val ds = new DataStoreHelper(params).ds
-        ds.removeSchema(feature)
-        if (!ds.getNames.contains(feature)) {
-          println(s"Deleted $catalog:$feature")
-        } else {
-          logger.info(s"There was an error deleting feature '$catalog:$feature'" +
-            "Please check that all arguments are correct in the previous command.")
-        }
-      } catch {
-        case e: Exception =>
-          logger.error(s"Error deleting feature '$catalog:$feature': "+e.getMessage, e)
-      }
+    if (params.force || promptConfirm(features, catalog)) {
+      features.foreach(remove(_, catalog, ds))
     } else {
-      logger.info(s"Cancelled deletion of feature '$catalog:$feature'")
+      logger.info(s"Cancelled deletion")
     }
-
   }
+
+  def remove(feature: String, catalog: String, ds: AccumuloDataStore) =
+    try {
+      ds.removeSchema(feature)
+      if (!ds.getNames.contains(feature)) {
+        println(s"Deleted $catalog:$feature")
+      } else {
+        logger.error(s"There was an error deleting feature '$catalog:$feature'")
+      }
+    } catch {
+      case e: Exception =>
+        logger.error(s"Error deleting feature '$catalog:$feature': " + e.getMessage, e)
+    }
 
 }
 
 object DeleteFeatureCommand {
-  val Command = "deletefeature"
 
-  def promptConfirm(feature: String, catalog: String) =
-    if (System.console() != null) {
-      print(s"Delete '$feature' from catalog table '$catalog'? (yes/no): ")
-      System.console().readLine().toLowerCase().trim == "yes"
-    } else {
-      throw new IllegalStateException("Unable to confirm feature deletion via console..." +
-        "Please ensure stdout is not redirected or --force flag is set")
-    }
+  def promptConfirm(features: List[String], catalog: String) =
+    PromptConfirm.confirm(s"Delete ${features.mkString(",")} from catalog table $catalog? (yes/no): ")
 
-  @Parameters(commandDescription = "Delete a feature's data and definition from a GeoMesa catalog")
-  class DeleteParams extends FeatureParams {
-    @Parameter(names = Array("-f", "--force"), description = "Force deletion of feature without prompt", required = false)
-    var forceDelete: Boolean = false
-
-    @Parameter(names = Array("-p", "--pattern"), description = "Regular expression for the features to delete", required = false)
-    var pattern: Pattern = null
+  def determineFeatures(pattern: Pattern, catalog: String, featureName: String, ds: AccumuloDataStore) = {
+    val patternFeatures = Option(pattern).map { p =>
+      listFeatures(ds, catalog, Option(p))
+    }.getOrElse(List.empty[String])
+    Option(featureName).toList ++ patternFeatures
   }
 
+  def validate(features: List[String], ds: AccumuloDataStore) = {
+    if (features.isEmpty) {
+      throw new IllegalArgumentException("No features found from pattern or feature name")
+    }
+
+    val validFeatures = ds.getTypeNames
+    features.foreach { f =>
+      if (!validFeatures.contains(f)) {
+        throw new IllegalArgumentException(s"Feature $f does not exist in datastore")
+      }
+    }
+  }
+
+  def listFeatures(ds: AccumuloDataStore, catalog: String, pattern: Option[Pattern]) = {
+    val filter: String => Boolean =
+      pattern.map(p => (s: String) => p.matcher(s).matches()).getOrElse( (s: String) => true)
+    ds.getTypeNames.filter(filter).toList
+  }
+  
+  @Parameters(commandDescription = "Delete a feature's data and definition from a GeoMesa catalog")
+  class DeleteFeatureParams extends OptionalFeatureParams {
+    @ParametersDelegate
+    val forceParams = new ForceParams
+    def force = forceParams.force
+
+    @ParametersDelegate
+    val patternParams = new PatternParams
+    def pattern = patternParams.pattern
+  }
 
 }

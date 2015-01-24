@@ -475,6 +475,15 @@ class AccumuloDataStore(val connector: Connector,
       getRecordTableForType(sft)
     ).filter(tableOps.exists).foreach(tableOps.delete)
 
+  def delete = {
+    getTypeNames.flatMap{ t =>
+      Seq(getSpatioTemporalIdxTableName(t),
+          getAttrIdxTableName(t),
+          getRecordTableForType(t))
+    }.foreach(tableOps.delete(_))
+    tableOps.delete(catalogTable)
+  }
+
   /**
    * GeoTools API createSchema() method for a featureType...creates tables with
    * ${numTabletServers} splits. To control the number of splits use the

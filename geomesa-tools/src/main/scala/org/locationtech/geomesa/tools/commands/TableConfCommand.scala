@@ -26,8 +26,9 @@ import org.locationtech.geomesa.tools.commands.TableConfCommand._
 import scala.collection.JavaConversions._
 
 class TableConfCommand(parent: JCommander) extends Command with Logging {
+  override val command = "tableconf"
 
-  val jcTableConf = mkSubCommand(parent, Command, new TableConfParams())
+  val jcTableConf = mkSubCommand(parent, command, new TableConfParams())
   val tcList      = new ListParams
   val tcUpdate    = new UpdateParams
   val tcDesc      = new DescribeParams
@@ -65,14 +66,13 @@ class TableConfCommand(parent: JCommander) extends Command with Logging {
 
       case _ =>
         println("Error: no tableconf command listed...run as: geomesa tableconf <tableconf-command>")
-        parent.usage(Command)
+        parent.usage(command)
     }
   }
 
 }
 
 object TableConfCommand {
-  val Command            = "tableconf"
   val ListSubCommand     = "list"
   val DescribeSubCommand = "describe"
   val UpdateCommand      = "update"

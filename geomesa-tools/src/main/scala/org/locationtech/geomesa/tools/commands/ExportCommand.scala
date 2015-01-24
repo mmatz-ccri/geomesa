@@ -27,15 +27,16 @@ import org.locationtech.geomesa.core.index
 import org.locationtech.geomesa.tools.Utils.Formats
 import org.locationtech.geomesa.tools.Utils.Formats._
 import org.locationtech.geomesa.tools._
-import org.locationtech.geomesa.tools.commands.ExportCommand.{Command, ExportParameters}
+import org.locationtech.geomesa.tools.commands.ExportCommand.ExportParameters
 import org.opengis.filter.Filter
 
 import scala.util.{Failure, Success, Try}
 
 class ExportCommand(parent: JCommander) extends Command with Logging {
+  override val command = "export"
 
   val params = new ExportParameters
-  parent.addCommand(Command, params)
+  parent.addCommand(command, params)
 
   override def execute() = {
 
@@ -123,8 +124,6 @@ class ExportCommand(parent: JCommander) extends Command with Logging {
 }
 
 object ExportCommand {
-  val Command = "export"
-
   @Parameters(commandDescription = "Export a GeoMesa feature")
   class ExportParameters extends OptionalCqlFilterParameters {
     @Parameter(names = Array("-fmt", "--format"), description = "Format to export (csv|tsv|gml|json|shp|bin)")

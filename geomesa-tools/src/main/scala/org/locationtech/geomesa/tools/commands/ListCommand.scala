@@ -21,9 +21,10 @@ import org.locationtech.geomesa.tools.DataStoreHelper
 import org.locationtech.geomesa.tools.commands.ListCommand._
 
 class ListCommand(parent: JCommander) extends Command with Logging {
+  override val command = "list"
 
   val params = new ListParameters()
-  parent.addCommand(Command, params)
+  parent.addCommand(command, params)
   lazy val ds = new DataStoreHelper(params).ds
 
   override def execute() = {
@@ -34,8 +35,6 @@ class ListCommand(parent: JCommander) extends Command with Logging {
 }
 
 object ListCommand {
-  val Command = "list"
-
   @Parameters(commandDescription = "List GeoMesa features for a given catalog")
   class ListParameters extends GeoMesaParams {}
 }

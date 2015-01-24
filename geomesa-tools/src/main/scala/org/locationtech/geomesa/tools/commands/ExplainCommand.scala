@@ -21,12 +21,13 @@ import org.geotools.data.{Query, Transaction}
 import org.geotools.filter.text.ecql.ECQL
 import org.locationtech.geomesa.core.data.AccumuloFeatureReader
 import org.locationtech.geomesa.tools.DataStoreHelper
-import org.locationtech.geomesa.tools.commands.ExplainCommand.{Command, ExplainParameters}
+import org.locationtech.geomesa.tools.commands.ExplainCommand.ExplainParameters
 
 class ExplainCommand(parent: JCommander) extends Command with Logging {
+  override val command = "explain"
 
   val params = new ExplainParameters()
-  parent.addCommand(Command, params)
+  parent.addCommand(command, params)
 
   override def execute() =
     try {
@@ -42,8 +43,6 @@ class ExplainCommand(parent: JCommander) extends Command with Logging {
 }
 
 object ExplainCommand {
-  val Command = "explain"
-
   @Parameters(commandDescription = "Explain how a GeoMesa query will be executed")
   class ExplainParameters extends RequiredCqlFilterParameters {}
 }
