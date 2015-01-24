@@ -18,16 +18,14 @@ package org.locationtech.geomesa.tools.commands
 import java.util
 
 import com.beust.jcommander.{JCommander, Parameter, Parameters}
-import org.locationtech.geomesa.tools.commands.HelpCommand.HelpParameters
 import org.locationtech.geomesa.tools.Runner.commandUsage
+import org.locationtech.geomesa.tools.commands.HelpCommand.HelpParameters
 
 import scala.collection.JavaConversions._
 
-class HelpCommand(parent: JCommander) extends Command {
+class HelpCommand(parent: JCommander) extends Command(parent) {
   override val command = "help"
-
-  val params = new HelpParameters
-  parent.addCommand(command, params)
+  override val params = new HelpParameters
 
   override def execute(): Unit =
     params.commandName.headOption match {

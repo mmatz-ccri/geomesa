@@ -32,11 +32,9 @@ import org.opengis.filter.Filter
 
 import scala.util.{Failure, Success, Try}
 
-class ExportCommand(parent: JCommander) extends Command with Logging {
+class ExportCommand(parent: JCommander) extends CatalogCommand(parent) with Logging {
   override val command = "export"
-
-  val params = new ExportParameters
-  parent.addCommand(command, params)
+  override val params = new ExportParameters
 
   override def execute() = {
 
@@ -67,12 +65,12 @@ class ExportCommand(parent: JCommander) extends Command with Logging {
           if (Option(params.attributes).nonEmpty) {
             params.attributes
           } else {
-            val sft = new DataStoreHelper(params).ds.getSchema(params.featureName)
+            val sft = ds.getSchema(params.featureName)
             ShapefileExport.modifySchema(sft)
           }
         getFeatureCollection(Some(schemaString))
       case BIN =>
-        val sft = new DataStoreHelper(params).ds.getSchema(params.featureName)
+        val sft = ds.getSchema(params.featureName)
         index.getDtgFieldName(sft).foreach(BinFileExport.DEFAULT_TIME = _)
         getFeatureCollection(Some(BinFileExport.getAttributeList(params)))
       case _ => getFeatureCollection()
@@ -94,7 +92,7 @@ class ExportCommand(parent: JCommander) extends Command with Logging {
     }
 
     // get the feature store used to query the GeoMesa data
-    val fs = new DataStoreHelper(params).ds.getFeatureSource(params.featureName).asInstanceOf[AccumuloFeatureStore]
+    val fs = ds.getFeatureSource(params.featureName).asInstanceOf[AccumuloFeatureStore]
 
     // and execute the query
     Try(fs.getFeatures(q)) match {

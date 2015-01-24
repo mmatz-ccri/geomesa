@@ -20,12 +20,9 @@ import com.typesafe.scalalogging.slf4j.Logging
 import org.locationtech.geomesa.tools.FeatureCreator
 import org.locationtech.geomesa.tools.commands.CreateCommand.CreateParameters
 
-class CreateCommand(parent: JCommander) extends Command with Logging {
+class CreateCommand(parent: JCommander) extends Command(parent) with Logging {
   override val command = "create"
-
-  val params = new CreateParameters()
-  parent.addCommand(command, params)
-
+  override val params = new CreateParameters()
   override def execute() = FeatureCreator.createFeature(params)
 }
 

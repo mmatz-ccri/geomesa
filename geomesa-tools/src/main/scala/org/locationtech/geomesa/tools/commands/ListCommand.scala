@@ -17,15 +17,11 @@ package org.locationtech.geomesa.tools.commands
 
 import com.beust.jcommander.{JCommander, Parameters}
 import com.typesafe.scalalogging.slf4j.Logging
-import org.locationtech.geomesa.tools.DataStoreHelper
 import org.locationtech.geomesa.tools.commands.ListCommand._
 
-class ListCommand(parent: JCommander) extends Command with Logging {
+class ListCommand(parent: JCommander) extends CatalogCommand(parent) with Logging {
   override val command = "list"
-
-  val params = new ListParameters()
-  parent.addCommand(command, params)
-  lazy val ds = new DataStoreHelper(params).ds
+  override val params = new ListParameters()
 
   override def execute() = {
     logger.info("Running List Features on catalog "+params.catalog)

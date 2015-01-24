@@ -40,7 +40,10 @@ object Runner extends Logging {
       new CreateCommand(jc),
       new ExplainCommand(jc),
       new HelpCommand(jc)
-    ).map(c=> c.command -> c).toMap
+    )
+
+    commands.foreach(_.register)
+    val commandMap = commands.map(c=> c.command -> c).toMap
 
     try {
       jc.parse(args.toArray: _*)
@@ -52,7 +55,7 @@ object Runner extends Logging {
     }
 
     val command: Command =
-      commands.get(jc.getParsedCommand).getOrElse(new DefaultCommand(jc))
+      commandMap.get(jc.getParsedCommand).getOrElse(new DefaultCommand(jc))
 
     try {
       command.execute()
@@ -68,9 +71,11 @@ object Runner extends Logging {
     parent.getCommands().get(name)
   }
 
-  class DefaultCommand(jc: JCommander) extends Command {
+  class DefaultCommand(jc: JCommander) extends Command(jc) {
     override def execute() = println(commandUsage(jc))
+    override def register = {}
     override val command: String = ""
+    override val params: Any = null
   }
 
   def commandUsage(jc: JCommander) = {

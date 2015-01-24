@@ -20,18 +20,14 @@ import java.util.regex.Pattern
 import com.beust.jcommander.{JCommander, Parameters, ParametersDelegate}
 import com.typesafe.scalalogging.slf4j.Logging
 import org.locationtech.geomesa.core.data.AccumuloDataStore
-import org.locationtech.geomesa.tools.DataStoreHelper
 import org.locationtech.geomesa.tools.commands.DeleteFeatureCommand.{promptConfirm, _}
 
-class DeleteFeatureCommand(parent: JCommander) extends Command with Logging {
+class DeleteFeatureCommand(parent: JCommander) extends CatalogCommand(parent) with Logging {
   override val command = "delete-feature"
-
-  val params = new DeleteFeatureParams
-  parent.addCommand(command, params)
+  override val params = new DeleteFeatureParams
 
   override def execute() = {
     val catalog = params.catalog
-    val ds = new DataStoreHelper(params).ds
     val features = determineFeatures(params.pattern, catalog, params.featureName, ds)
     validate(features, ds)
 

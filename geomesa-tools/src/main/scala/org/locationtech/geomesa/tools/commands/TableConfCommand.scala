@@ -25,8 +25,10 @@ import org.locationtech.geomesa.tools.commands.TableConfCommand._
 
 import scala.collection.JavaConversions._
 
-class TableConfCommand(parent: JCommander) extends Command with Logging {
+class TableConfCommand(parent: JCommander) extends CatalogCommand(parent) with Logging {
   override val command = "tableconf"
+  override val params = null
+  override def register = {}
 
   val jcTableConf = mkSubCommand(parent, command, new TableConfParams())
   val tcList      = new ListParams

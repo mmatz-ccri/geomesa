@@ -25,11 +25,9 @@ import org.locationtech.geomesa.tools.ingest.{DelimitedIngest, ShpIngest}
 
 import scala.collection.JavaConversions._
 
-class IngestCommand(parent: JCommander) extends Command with Logging {
+class IngestCommand(parent: JCommander) extends Command(parent) with Logging {
   override val command = "ingest"
-
-  val params = new IngestParameters()
-  parent.addCommand(command, params)
+  override val params = new IngestParameters()
 
   override def execute(): Unit = {
     val fmt = Option(params.format).getOrElse(getFileExtension(params.files(0)))

@@ -15,8 +15,27 @@
  */
 package org.locationtech.geomesa.tools.commands
 
-trait Command {
+import com.beust.jcommander.JCommander
+import org.geotools.data.DataStoreFinder
+import org.locationtech.geomesa.core.data.AccumuloDataStore
+import org.locationtech.geomesa.core.data.AccumuloDataStoreFactory.{params => dsParams}
+import org.locationtech.geomesa.tools.{DataStoreHelper, AccumuloProperties}
+
+import scala.collection.JavaConversions._
+import scala.util.{Failure, Success, Try}
+
+abstract class Command(parent: JCommander) {
   def execute()
+  val params: Any
+  def register = parent.addCommand(command, params)
   val command: String
 }
+
+abstract class CatalogCommand(parent: JCommander) extends Command(parent) with AccumuloProperties {
+
+  override val params: GeoMesaParams
+
+  lazy val ds = new DataStoreHelper(params).ds
+}
+
 

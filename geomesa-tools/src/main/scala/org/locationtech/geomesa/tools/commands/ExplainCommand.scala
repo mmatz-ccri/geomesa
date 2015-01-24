@@ -20,19 +20,15 @@ import com.typesafe.scalalogging.slf4j.Logging
 import org.geotools.data.{Query, Transaction}
 import org.geotools.filter.text.ecql.ECQL
 import org.locationtech.geomesa.core.data.AccumuloFeatureReader
-import org.locationtech.geomesa.tools.DataStoreHelper
 import org.locationtech.geomesa.tools.commands.ExplainCommand.ExplainParameters
 
-class ExplainCommand(parent: JCommander) extends Command with Logging {
+class ExplainCommand(parent: JCommander) extends CatalogCommand(parent) with Logging {
   override val command = "explain"
-
-  val params = new ExplainParameters()
-  parent.addCommand(command, params)
+  override val params = new ExplainParameters()
 
   override def execute() =
     try {
       val q = new Query(params.featureName, ECQL.toFilter(params.cqlFilter))
-      val ds = new DataStoreHelper(params).ds
       val afr = ds.getFeatureReader(q, Transaction.AUTO_COMMIT).asInstanceOf[AccumuloFeatureReader]
       afr.explainQuery(q)
     } catch {
