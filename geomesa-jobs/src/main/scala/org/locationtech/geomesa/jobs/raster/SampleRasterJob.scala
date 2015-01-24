@@ -1,6 +1,7 @@
 package org.locationtech.geomesa.jobs.raster
 
 import java.awt.image.RenderedImage
+import javax.media.jai.{Histogram, JAI}
 
 import com.twitter.scalding._
 import org.apache.accumulo.core.data.{Key, Mutation, Value}
@@ -17,6 +18,7 @@ import org.opengis.feature.simple.SimpleFeatureType
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.reflect.ClassTag
 
 trait RasterJobResources {
   def ds: AccumuloDataStore
@@ -78,19 +80,37 @@ class SampleRasterJob(args: Args) extends Job(args) {
 //    .mapTo('mutation) {
 //    (kv: (Key, Value)) => SampleRasterJob.kvToMutation(kv._1, kv._2)
 //  }.write(AccumuloSource(options))
+//
+////  // Working Grayscale code
+//  AccumuloSource(options)
+//    .map(('key, 'value) -> 'mutation) {
+//      (kv: (Key, Value)) => {
+//        GrayscaleJob.colorKVtoGrayScaleMutation(kv._1, kv._2)
+//      }
+//  }.write(AccumuloSource(options))
 
-  AccumuloSource(options)
-    .map(('key, 'value) -> 'mutation) {
+  // Working Grayscale code
+ val a =   AccumuloSource(options)
+    .mapTo('line) {
       (kv: (Key, Value)) => {
-        GrayscaleJob.colorKVtoGrayScaleMutation(kv._1, kv._2)
-        //SampleRasterJob.kvToMutation(kv._1, kv._2)
-      }
-  }.write(AccumuloSource(options))
+        s"foo ${HistogramJob.kvToHistogram(kv._1, kv._2).mkString(",")}"
+    }
+  }.write(TextLine("hdfs://dhead:54310/tmp/jnh-test/output/histogram"))
+
+//    .groupAll { _.reduce[Array[Int]]('hist -> 'totHist) {
+//    (h1: Array[Int], h2: Array[Int]) => HistogramJob.addBins(h1, h2)
+//  }
+//  }.write(TextLine("hdfs://dhead:54310/tmp/jnh-test/output/histogram"))
+
 }
 
+object RasterJobs {
+  val schema = RasterIndexSchema("")
+}
+
+import org.locationtech.geomesa.jobs.raster.RasterJobs._
 
 object GrayscaleJob {
-  val schema = RasterIndexSchema("")
   val d = Array(Array(.21, .71, 0.07, 0.0))
 
   def colorKVtoGrayScaleMutation(k: Key, v: Value): Mutation = {
@@ -111,6 +131,37 @@ object GrayscaleJob {
   }
 
 }
+
+object HistogramJob {
+
+  def kvToHistogram(k: Key, v: Value): Array[Int] = {
+    val raster = schema.decode(k, v)
+    getHist(raster.chunk)
+  }
+
+  def getHist(image: java.awt.image.RenderedImage): Array[Int] = {
+    val dst = JAI.create("histogram", image, null)
+    val h = dst.getProperty("histogram").asInstanceOf[Histogram]
+    h.getBins(0)
+  }
+
+  def addBins[T : Numeric : ClassTag](a: Array[T], b: Array[T]): Array[T] = {
+    require(a.length == b.length)
+    val op = implicitly[Numeric[T]]
+
+    val ret = new Array[T](a.length)
+
+    var i = 0
+
+    while(i < a.length) {
+      ret(i) = op.plus(a(i), b(i))
+      i += 1
+    }
+    ret
+  }
+
+}
+
 
 object SampleRasterJob {
 
