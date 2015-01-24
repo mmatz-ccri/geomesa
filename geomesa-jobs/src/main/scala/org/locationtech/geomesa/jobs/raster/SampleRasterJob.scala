@@ -1,7 +1,7 @@
 package org.locationtech.geomesa.jobs.raster
 
 import com.twitter.scalding._
-import org.apache.accumulo.core.data.{Key, Value}
+import org.apache.accumulo.core.data.{Mutation, Key, Value}
 import org.apache.accumulo.core.security.Authorizations
 import org.apache.hadoop.conf.Configuration
 import org.geotools.data.DataStoreFinder
@@ -45,35 +45,55 @@ object RasterJobResources {
 
 class SampleRasterJob(args: Args) extends Job(args) {
 
-  lazy val zookeepers       = args(ConnectionParams.ZOOKEEPERS)
-  lazy val instance         = args(ConnectionParams.ACCUMULO_INSTANCE)
-  lazy val user             = args(ConnectionParams.ACCUMULO_USER)
-  lazy val password         = args(ConnectionParams.ACCUMULO_PASSWORD)
+//  lazy val zookeepers       = args(ConnectionParams.ZOOKEEPERS)
+//  lazy val instance         = args(ConnectionParams.ACCUMULO_INSTANCE)
+//  lazy val user             = args(ConnectionParams.ACCUMULO_USER)
+//  lazy val password         = args(ConnectionParams.ACCUMULO_PASSWORD)
   //lazy val tablename        = args(ConnectionParams.CATALOG_TABLE)
 
   //val tablename = "AANNEX_SRI_ALL_VIS_RASTERS"
 
   val inputTable = "Aannex_sri_raster_1"
   val outputTable = "jnh_mr1"
-  lazy val input   = AccumuloInputOptions(inputTable, authorizations = new Authorizations("S", "USA"))
-  lazy val output  = AccumuloOutputOptions(outputTable)
-  lazy val options = AccumuloSourceOptions("dcloud", "dzoo1:2181", "root", "secret", input, output)
+  //lazy val input   = AccumuloInputOptions(inputTable, authorizations = new Authorizations("S", "USA"))
+  lazy val input   = AccumuloInputOptions(inputTable)
+  lazy val output  = AccumuloOutputOptions("jnh_mr2", createTable = true)
+  lazy val options = AccumuloSourceOptions("dcloud", "dzoo1", "root", "secret", input, output)
 
-  println(s"Args decode to $zookeepers $instance $user $password $inputTable")
+  //println(s"Args decode to $zookeepers $instance $user $password $inputTable")
 
 //  AccumuloSource(options)
 //    .map(('key, 'value) -> ('line, 'number)) {
 //    (kv: (Key, Value)) => ("foo", 2)
 //  }.write(TextLine("hdfs://dhead:54310/tmp/jnh-test/output"))
 
+//  AccumuloSource(options)
+//    .mapTo('line) {
+//      (kv: (Key, Value)) => s"rowId ${kv._1.getRow}"
+//  }.write(TextLine("hdfs://dhead:54310/tmp/jnh-test/output"))
+
+//  AccumuloSource(options)
+//    .mapTo('mutation) {
+//    (kv: (Key, Value)) => SampleRasterJob.kvToMutation(kv._1, kv._2)
+//  }.write(AccumuloSource(options))
+
   AccumuloSource(options)
-    .mapTo('line) {
-      (kv: (Key, Value)) => s"rowId ${kv._1.getRow}"
-  }.write(TextLine("hdfs://dhead:54310/tmp/jnh-test/output"))
+    .map(('key, 'value) -> 'mutation) {
+      (kv: (Key, Value)) => {
+        SampleRasterJob.kvToMutation(kv._1, kv._2)
+      }
+  }.write(AccumuloSource(options))
 }
 
 
 object SampleRasterJob {
+
+  def kvToMutation(k: Key, v: Value): Mutation = {
+    val m = new Mutation(k.getRow)
+
+    m.put(k.getColumnFamily, k.getColumnQualifier, k.getColumnVisibilityParsed, v)
+    m
+  }
 
   val conf = new Configuration
   conf.set("accumulo.monitor.address", "damaster"

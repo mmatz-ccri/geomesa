@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.locationtech.geomesa.jobs
+package org.locationtech.geomesa.jobs.scalding
 
 import com.twitter.scalding.{Hdfs, Read, Write}
 import org.apache.accumulo.core.client.mock.MockInstance
