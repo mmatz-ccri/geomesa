@@ -41,6 +41,14 @@ case class AccumuloRasterQueryPlanner(schema: RasterIndexSchema) extends Logging
 
   def getQueryPlan(rq: RasterQuery): QueryPlan = {
 
+    rq match {
+      case bbres: BBOXResolutionRasterQuery => getBBOXResolutionQueryPlan(bbres)
+      case AllRasterQuery => QueryPlan.fullTableScan
+    }
+  }
+
+  def getBBOXResolutionQueryPlan(rq: BBOXResolutionRasterQuery): QueryPlan = {
+
     // TODO: WCS: Improve this if possible
     // ticket is GEOMESA-560
     // note that this will only go DOWN in GeoHash resolution -- the enumeration will miss any GeoHashes

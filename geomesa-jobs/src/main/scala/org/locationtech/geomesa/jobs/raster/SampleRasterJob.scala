@@ -1,5 +1,7 @@
 package org.locationtech.geomesa.jobs.raster
 
+import java.awt.image.RenderedImage
+
 import com.twitter.scalding._
 import org.apache.accumulo.core.data.{Mutation, Key, Value}
 import org.apache.accumulo.core.security.Authorizations
@@ -10,6 +12,8 @@ import org.locationtech.geomesa.core.data.AccumuloDataStoreFactory.params._
 import org.locationtech.geomesa.feature.SimpleFeatureDecoder
 import org.locationtech.geomesa.jobs.JobUtils
 import org.locationtech.geomesa.jobs.scalding._
+import org.locationtech.geomesa.raster.data.Raster
+import org.locationtech.geomesa.raster.index.RasterIndexSchema
 import org.opengis.feature.`type`.AttributeDescriptor
 import org.opengis.feature.simple.SimpleFeatureType
 
@@ -54,7 +58,7 @@ class SampleRasterJob(args: Args) extends Job(args) {
   //val tablename = "AANNEX_SRI_ALL_VIS_RASTERS"
 
   val inputTable = "Aannex_sri_raster_1"
-  val outputTable = "jnh_mr1"
+  val outputTable = "jnh_raster_mr1"
   //lazy val input   = AccumuloInputOptions(inputTable, authorizations = new Authorizations("S", "USA"))
   lazy val input   = AccumuloInputOptions(inputTable)
   lazy val output  = AccumuloOutputOptions("jnh_mr2", createTable = true)
@@ -80,11 +84,33 @@ class SampleRasterJob(args: Args) extends Job(args) {
   AccumuloSource(options)
     .map(('key, 'value) -> 'mutation) {
       (kv: (Key, Value)) => {
-        SampleRasterJob.kvToMutation(kv._1, kv._2)
+        GrayscaleJob.colorKVtoGrayScaleMutation(kv._1, kv._2)
+        //SampleRasterJob.kvToMutation(kv._1, kv._2)
       }
   }.write(AccumuloSource(options))
 }
 
+
+object GrayscaleJob {
+  val schema = RasterIndexSchema("")
+  val d = Array(Array(.21, .71, 0.07, 0.0))
+
+  def colorKVtoGrayScaleMutation(k: Key, v: Value): Mutation = {
+    val raster = schema.decode(k, v)
+
+    import javax.media.jai._
+    val grayScale: RenderedImage = JAI.create("bandcombine", raster.chunk, d, null)
+
+    val grayRaster = Raster(grayScale, raster.metadata, raster.resolution)
+    val grayBytes = Raster.encodeToBytes(grayRaster)
+
+
+    val m = new Mutation(k.getRow)
+    m.put(k.getColumnFamily, k.getColumnQualifier, k.getColumnVisibilityParsed, new Value(grayBytes))
+    m
+  }
+
+}
 
 object SampleRasterJob {
 
