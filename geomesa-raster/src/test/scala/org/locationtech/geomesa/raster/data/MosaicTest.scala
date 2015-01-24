@@ -107,7 +107,7 @@ class MosaicTest extends Specification {
     val rs = getRasterStore
     ingestRastersList.foreach(rs.putRaster)
     //1.0 is used as a fake resolution for this mock Accumulo test
-    val rq = new RasterQuery(BoundingBox(envelope), 1.0, None, None)
+    val rq = RasterQuery(BoundingBox(envelope), 1.0, None, None)
     val queryRasters = rs.getRasters(rq)
     val (ingestImageByteArray, ingestCount) = getImageByteArrayAndCount(ingestRastersList.toIterator, width, height, envelope, resX, resY)
     val (queryImageByteArray, queryCount) = getImageByteArrayAndCount(queryRasters, width, height, envelope, resX, resY)

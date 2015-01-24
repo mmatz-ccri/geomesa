@@ -3,12 +3,10 @@ package org.locationtech.geomesa.jobs.raster
 import java.awt.image.RenderedImage
 
 import com.twitter.scalding._
-import org.apache.accumulo.core.data.{Mutation, Key, Value}
-import org.apache.accumulo.core.security.Authorizations
+import org.apache.accumulo.core.data.{Key, Mutation, Value}
 import org.apache.hadoop.conf.Configuration
 import org.geotools.data.DataStoreFinder
 import org.locationtech.geomesa.core.data.AccumuloDataStore
-import org.locationtech.geomesa.core.data.AccumuloDataStoreFactory.params._
 import org.locationtech.geomesa.feature.SimpleFeatureDecoder
 import org.locationtech.geomesa.jobs.JobUtils
 import org.locationtech.geomesa.jobs.scalding._
@@ -57,11 +55,11 @@ class SampleRasterJob(args: Args) extends Job(args) {
 
   //val tablename = "AANNEX_SRI_ALL_VIS_RASTERS"
 
-  val inputTable = "Aannex_sri_raster_1"
-  val outputTable = "jnh_raster_mr1"
+  val inputTable = "jnh_color"
+  val outputTable = "jnh_grayscale"
   //lazy val input   = AccumuloInputOptions(inputTable, authorizations = new Authorizations("S", "USA"))
   lazy val input   = AccumuloInputOptions(inputTable)
-  lazy val output  = AccumuloOutputOptions("jnh_mr2", createTable = true)
+  lazy val output  = AccumuloOutputOptions(outputTable)
   lazy val options = AccumuloSourceOptions("dcloud", "dzoo1", "root", "secret", input, output)
 
   //println(s"Args decode to $zookeepers $instance $user $password $inputTable")
@@ -102,11 +100,13 @@ object GrayscaleJob {
     val grayScale: RenderedImage = JAI.create("bandcombine", raster.chunk, d, null)
 
     val grayRaster = Raster(grayScale, raster.metadata, raster.resolution)
-    val grayBytes = Raster.encodeToBytes(grayRaster)
 
+    val (nk, nv) = schema.encode(grayRaster)
 
-    val m = new Mutation(k.getRow)
-    m.put(k.getColumnFamily, k.getColumnQualifier, k.getColumnVisibilityParsed, new Value(grayBytes))
+    //val grayBytes = Raster.encodeToBytes(grayRaster)
+
+    val m = new Mutation(nk.getRow)
+    m.put(nk.getColumnFamily, nk.getColumnQualifier, nk.getColumnVisibilityParsed, nv)
     m
   }
 

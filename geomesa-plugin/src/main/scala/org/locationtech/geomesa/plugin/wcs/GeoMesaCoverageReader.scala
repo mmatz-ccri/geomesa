@@ -83,11 +83,11 @@ class GeoMesaCoverageReader(val url: String, hints: Hints) extends AbstractGridC
   }
 
   def getBounds(): GeneralEnvelope = {
-    val bbox = ars.getBounds()
+    val bbox = ars.getBounds
     new GeneralEnvelope(Array(bbox.minLon, bbox.minLat), Array(bbox.maxLon, bbox.maxLat))
   }
 
   def getGridRange(): GridEnvelope2D = {
-    ars.getGridRange()
+    ars.getGridRange
   }
 }
