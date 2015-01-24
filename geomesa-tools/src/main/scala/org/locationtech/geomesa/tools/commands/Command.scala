@@ -16,13 +16,8 @@
 package org.locationtech.geomesa.tools.commands
 
 import com.beust.jcommander.JCommander
-import org.geotools.data.DataStoreFinder
-import org.locationtech.geomesa.core.data.AccumuloDataStore
 import org.locationtech.geomesa.core.data.AccumuloDataStoreFactory.{params => dsParams}
-import org.locationtech.geomesa.tools.{DataStoreHelper, AccumuloProperties}
-
-import scala.collection.JavaConversions._
-import scala.util.{Failure, Success, Try}
+import org.locationtech.geomesa.tools.{AccumuloProperties, DataStoreHelper}
 
 abstract class Command(parent: JCommander) {
   def execute()
