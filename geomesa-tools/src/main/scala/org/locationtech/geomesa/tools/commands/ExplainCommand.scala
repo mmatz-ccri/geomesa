@@ -22,7 +22,7 @@ import org.geotools.filter.text.ecql.ECQL
 import org.locationtech.geomesa.core.data.AccumuloFeatureReader
 import org.locationtech.geomesa.tools.commands.ExplainCommand.ExplainParameters
 
-class ExplainCommand(parent: JCommander) extends HasCatalogCommand(parent) with Logging {
+class ExplainCommand(parent: JCommander) extends CommandWithCatalog(parent) with Logging {
   override val command = "explain"
   override val params = new ExplainParameters()
 

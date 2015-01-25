@@ -43,7 +43,7 @@ object Runner extends Logging {
     )
 
     commands.foreach(_.register)
-    val commandMap = commands.map(c=> c.command -> c).toMap
+    val commandMap = commands.map(c => c.command -> c).toMap
 
     try {
       jc.parse(args.toArray: _*)

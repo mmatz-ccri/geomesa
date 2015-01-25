@@ -32,7 +32,7 @@ import org.opengis.filter.Filter
 
 import scala.util.{Failure, Success, Try}
 
-class ExportCommand(parent: JCommander) extends HasCatalogCommand(parent) with Logging {
+class ExportCommand(parent: JCommander) extends CommandWithCatalog(parent) with Logging {
   override val command = "export"
   override val params = new ExportParameters
 

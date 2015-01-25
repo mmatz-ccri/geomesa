@@ -21,7 +21,7 @@ import org.locationtech.geomesa.tools.commands.DeleteFeatureCommand.DeleteFeatur
 
 import scala.util.{Failure, Success, Try}
 
-class DeleteFeatureCommand(parent: JCommander) extends HasCatalogCommand(parent) with Logging {
+class DeleteFeatureCommand(parent: JCommander) extends CommandWithCatalog(parent) with Logging {
   override val command = "delete-feature"
   override val params = new DeleteFeatureParams
 
@@ -60,7 +60,7 @@ class DeleteFeatureCommand(parent: JCommander) extends HasCatalogCommand(parent)
     Try {
       ds.removeSchema(feature)
       if (ds.getNames.contains(feature)) {
-        throw new Exception(s"There was an error deleting feature '${params.catalog}:$feature'")
+        throw new Exception(s"There was an error deleting feature '$catalog:$feature'")
       }
     }
 
@@ -77,13 +77,13 @@ class DeleteFeatureCommand(parent: JCommander) extends HasCatalogCommand(parent)
     val validFeatures = ds.getTypeNames
     features.foreach { f =>
       if (!validFeatures.contains(f)) {
-        throw new IllegalArgumentException(s"Feature $f does not exist in catalog ${params.catalog}")
+        throw new IllegalArgumentException(s"Feature $f does not exist in catalog $catalog")
       }
     }
   }
 
   def promptConfirm(features: List[String]) =
-    PromptConfirm.confirm(s"Delete ${features.mkString(",")} from catalog ${params.catalog}? (yes/no): ")
+    PromptConfirm.confirm(s"Delete ${features.mkString(",")} from catalog $catalog? (yes/no): ")
 
 }
 

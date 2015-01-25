@@ -23,12 +23,12 @@ import org.opengis.feature.`type`.AttributeDescriptor
 
 import scala.collection.JavaConversions._
 
-class DescribeCommand(parent: JCommander) extends HasCatalogCommand(parent) with Logging {
+class DescribeCommand(parent: JCommander) extends CommandWithCatalog(parent) with Logging {
   override val command = "describe"
   override val params = new DescribeParameters
 
   def execute() = {
-    logger.info(s"Describing attributes of feature '${params.featureName}' from catalog table '${params.catalog}'...")
+    logger.info(s"Describing attributes of feature '${params.featureName}' from catalog table '$catalog'...")
     try {
       val sft = ds.getSchema(params.featureName)
 
