@@ -63,13 +63,16 @@ class DataStoreHelper(params: GeoMesaParams) extends AccumuloProperties {
   def catalogExists = 
     AccumuloDataStoreFactory.catalogExists(paramMap, params.useMock.toString.toBoolean)
 
-  def getOrCreateDs = 
-    if (!catalogExists) {
-      createNewDataStore
-    } else {
-      getDataStore
-    }
-  
+  /**
+   * Returns a data store for this catalog or creates one if it does not exist
+   * @return
+   */
+  def getOrCreateDs = if (!catalogExists) createNewDataStore else getDataStore
+
+  /**
+   * Get a handle to a datastore for a pre-existing catalog table
+   * @throws an Exception if the catalog table does not exist in accumulo
+   */
   def getExistingStore =
     if (catalogExists) {
       getDataStore
