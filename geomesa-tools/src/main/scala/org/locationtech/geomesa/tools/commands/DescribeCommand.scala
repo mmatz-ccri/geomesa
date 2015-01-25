@@ -23,7 +23,7 @@ import org.opengis.feature.`type`.AttributeDescriptor
 
 import scala.collection.JavaConversions._
 
-class DescribeCommand(parent: JCommander) extends CatalogCommand(parent) with Logging {
+class DescribeCommand(parent: JCommander) extends HasCatalogCommand(parent) with Logging {
   override val command = "describe"
   override val params = new DescribeParameters
 

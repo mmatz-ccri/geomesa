@@ -21,13 +21,16 @@ import org.locationtech.geomesa.tools.commands.DeleteFeatureCommand.DeleteFeatur
 
 import scala.util.{Failure, Success, Try}
 
-class DeleteFeatureCommand(parent: JCommander) extends CatalogCommand(parent) with Logging {
+class DeleteFeatureCommand(parent: JCommander) extends HasCatalogCommand(parent) with Logging {
   override val command = "delete-feature"
   override val params = new DeleteFeatureParams
 
   override def execute() = {
-    val features = getFeatureList()
+    if (Option(params.pattern).isEmpty && Option(params.featureName).isEmpty) {
+      throw new IllegalArgumentException("Error: Must provide either featureName or pattern to delete")
+    }
 
+    val features = getFeatureList()
     validate(features) match {
       case Success(_) =>
         if (params.force || promptConfirm(features)) {
@@ -36,7 +39,7 @@ class DeleteFeatureCommand(parent: JCommander) extends CatalogCommand(parent) wi
           logger.info(s"Cancelled deletion")
         }
       case Failure(ex) =>
-        println("Feature validation failed...deletion cancelled")
+        println(s"Feature validation failed on error: ${ex.getMessage}")
         logger.error(ex.getMessage)
     }
   }
@@ -63,7 +66,7 @@ class DeleteFeatureCommand(parent: JCommander) extends CatalogCommand(parent) wi
 
   def getFeatureList() =
     Option(params.featureName).toList ++ Option(params.pattern).map { p =>
-      ds.getTypeNames.toList.filter(p.matcher(_).matches)
+      ds.getTypeNames.filter(p.matcher(_).matches).toList
     }.getOrElse(List.empty[String])
 
   def validate(features: List[String]) = Try {

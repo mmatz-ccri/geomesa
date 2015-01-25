@@ -25,7 +25,7 @@ import org.locationtech.geomesa.tools.commands.TableConfCommand._
 
 import scala.collection.JavaConversions._
 
-class TableConfCommand(parent: JCommander) extends CatalogCommand(parent) with Logging {
+class TableConfCommand(parent: JCommander) extends HasCatalogCommand(parent) with Logging {
   override val command = "tableconf"
   override val params = null
   override def register = {}
@@ -116,7 +116,7 @@ object TableConfCommand {
     @Parameter(names = Array("-t", "--table-suffix"), description = "Table suffix to operate on (attr_idx, st_idx, or records)", required = true)
     var tableSuffix: String = null
 
-    lazy val ds = new DataStoreHelper(this).ds
+    lazy val ds = new DataStoreHelper(this).getExistingStore
     lazy val tableName = getTableName(ds, this)
   }
 

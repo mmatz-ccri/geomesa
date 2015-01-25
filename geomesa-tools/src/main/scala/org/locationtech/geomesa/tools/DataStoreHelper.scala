@@ -16,7 +16,7 @@
 package org.locationtech.geomesa.tools
 
 import org.geotools.data.DataStoreFinder
-import org.locationtech.geomesa.core.data.AccumuloDataStore
+import org.locationtech.geomesa.core.data.{AccumuloDataStoreFactory, AccumuloDataStore}
 import org.locationtech.geomesa.core.data.AccumuloDataStoreFactory.{params => dsParams}
 import org.locationtech.geomesa.tools.commands.GeoMesaParams
 
@@ -37,11 +37,44 @@ class DataStoreHelper(params: GeoMesaParams) extends AccumuloProperties {
     dsParams.authsParam.getName      -> Option(params.auths).orNull,
     dsParams.mockParam.getName       -> params.useMock.toString)
 
-  lazy val ds: AccumuloDataStore =
+  /**
+   * Create a new catalog table in geomesa if one does not already exist
+   * @throws an Exception if the catalog already exists
+   */
+  def createNewDataStore: AccumuloDataStore =
+    if (catalogExists) {
+      throw new Exception(s"Catalog already exists: ${params.catalog}")
+    } else {
+      getDataStore
+    }
+  
+  private def getDataStore: AccumuloDataStore =
     Try({ DataStoreFinder.getDataStore(paramMap).asInstanceOf[AccumuloDataStore] }) match {
       case Success(value) => value
       case Failure(ex)    =>
         val paramMsg = paramMap.map { case (k,v) => s"$k=$v" }.mkString(",")
         throw new Exception(s"Cannot connect to Accumulo. Please check your configuration: $paramMsg", ex)
     }
+
+  /**
+   * Test whether or not the catalog already exists
+   * @return
+   */
+  def catalogExists = 
+    AccumuloDataStoreFactory.catalogExists(paramMap, params.useMock.toString.toBoolean)
+
+  def getOrCreateDs = 
+    if (!catalogExists) {
+      createNewDataStore
+    } else {
+      getDataStore
+    }
+  
+  def getExistingStore =
+    if (catalogExists) {
+      getDataStore
+    } else {
+      throw new Exception(s"Catalog does not exist: ${params.catalog}")
+    }
+  
 }

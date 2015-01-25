@@ -19,15 +19,17 @@ import com.beust.jcommander.{JCommander, Parameters, ParametersDelegate}
 import com.typesafe.scalalogging.slf4j.Logging
 import org.locationtech.geomesa.tools.commands.DeleteCatalogCommand._
 
-class DeleteCatalogCommand (parent: JCommander) extends CatalogCommand(parent) with Logging {
+class DeleteCatalogCommand (parent: JCommander) extends HasCatalogCommand(parent) with Logging {
   override val command = "delete-catalog"
   override val params = new DeleteCatalogParams
 
   override def execute() = {
     val catalog = params.catalog
 
-    val msg = s"Delete catalog '$catalog'? (re-type catalog name to confirm): "
-    if (PromptConfirm.confirm(msg, List(catalog))) {
+    println(ds.getTypeNames.toList)
+
+    val msg = s"Delete catalog '$catalog'? (yes/no): "
+    if (PromptConfirm.confirm(msg, List("yes", "y"))) {
       ds.delete()
       println(s"Deleted catalog $catalog")
     } else {
