@@ -15,57 +15,58 @@
  */
 package org.locationtech.geomesa.tools.commands
 
-import java.util.regex.Pattern
-
 import com.beust.jcommander.{JCommander, Parameters, ParametersDelegate}
 import com.typesafe.scalalogging.slf4j.Logging
-import org.locationtech.geomesa.core.data.AccumuloDataStore
-import org.locationtech.geomesa.tools.commands.DeleteFeatureCommand.{promptConfirm, _}
+import org.locationtech.geomesa.tools.commands.DeleteFeatureCommand.DeleteFeatureParams
+
+import scala.util.{Failure, Success, Try}
 
 class DeleteFeatureCommand(parent: JCommander) extends CatalogCommand(parent) with Logging {
   override val command = "delete-feature"
   override val params = new DeleteFeatureParams
 
   override def execute() = {
-    val catalog = params.catalog
-    val features = determineFeatures(params.pattern, catalog, params.featureName, ds)
-    validate(features, ds)
+    val features = getFeatureList()
 
-    if (params.force || promptConfirm(features, catalog)) {
-      features.foreach(remove(_, catalog, ds))
-    } else {
-      logger.info(s"Cancelled deletion")
+    validate(features) match {
+      case Success(_) =>
+        if (params.force || promptConfirm(features)) {
+          removeAll(features)
+        } else {
+          logger.info(s"Cancelled deletion")
+        }
+      case Failure(ex) =>
+        println("Feature validation failed...deletion cancelled")
+        logger.error(ex.getMessage)
     }
   }
 
-  def remove(feature: String, catalog: String, ds: AccumuloDataStore) =
-    try {
-      ds.removeSchema(feature)
-      if (!ds.getNames.contains(feature)) {
-        println(s"Deleted $catalog:$feature")
-      } else {
-        logger.error(s"There was an error deleting feature '$catalog:$feature'")
+  def removeAll(features: List[String]) = {
+    features.foreach { f =>
+      remove(f) match {
+        case Success(_) =>
+          println(s"Deleted feature $f")
+        case Failure(ex) =>
+          println(s"Failure deleting feature $f")
+          logger.error(s"Failure deleting feature $f", ex)
       }
-    } catch {
-      case e: Exception =>
-        logger.error(s"Error deleting feature '$catalog:$feature': " + e.getMessage, e)
     }
-
-}
-
-object DeleteFeatureCommand {
-
-  def promptConfirm(features: List[String], catalog: String) =
-    PromptConfirm.confirm(s"Delete ${features.mkString(",")} from catalog table $catalog? (yes/no): ")
-
-  def determineFeatures(pattern: Pattern, catalog: String, featureName: String, ds: AccumuloDataStore) = {
-    val patternFeatures = Option(pattern).map { p =>
-      listFeatures(ds, catalog, Option(p))
-    }.getOrElse(List.empty[String])
-    Option(featureName).toList ++ patternFeatures
   }
 
-  def validate(features: List[String], ds: AccumuloDataStore) = {
+  def remove(feature: String) =
+    Try {
+      ds.removeSchema(feature)
+      if (ds.getNames.contains(feature)) {
+        throw new Exception(s"There was an error deleting feature '${params.catalog}:$feature'")
+      }
+    }
+
+  def getFeatureList() =
+    Option(params.featureName).toList ++ Option(params.pattern).map { p =>
+      ds.getTypeNames.toList.filter(p.matcher(_).matches)
+    }.getOrElse(List.empty[String])
+
+  def validate(features: List[String]) = Try {
     if (features.isEmpty) {
       throw new IllegalArgumentException("No features found from pattern or feature name")
     }
@@ -73,17 +74,18 @@ object DeleteFeatureCommand {
     val validFeatures = ds.getTypeNames
     features.foreach { f =>
       if (!validFeatures.contains(f)) {
-        throw new IllegalArgumentException(s"Feature $f does not exist in datastore")
+        throw new IllegalArgumentException(s"Feature $f does not exist in catalog ${params.catalog}")
       }
     }
   }
 
-  def listFeatures(ds: AccumuloDataStore, catalog: String, pattern: Option[Pattern]) = {
-    val filter: String => Boolean =
-      pattern.map(p => (s: String) => p.matcher(s).matches()).getOrElse( (s: String) => true)
-    ds.getTypeNames.filter(filter).toList
-  }
-  
+  def promptConfirm(features: List[String]) =
+    PromptConfirm.confirm(s"Delete ${features.mkString(",")} from catalog ${params.catalog}? (yes/no): ")
+
+}
+
+object DeleteFeatureCommand {
+
   @Parameters(commandDescription = "Delete a feature's data and definition from a GeoMesa catalog")
   class DeleteFeatureParams extends OptionalFeatureParams {
     @ParametersDelegate

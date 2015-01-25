@@ -28,7 +28,8 @@ class DeleteCatalogCommand (parent: JCommander) extends CatalogCommand(parent) w
 
     val msg = s"Delete catalog '$catalog'? (re-type catalog name to confirm): "
     if (PromptConfirm.confirm(msg, List(catalog))) {
-      ds.delete
+      ds.delete()
+      println(s"Deleted catalog $catalog")
     } else {
       logger.info(s"Cancelled deletion")
     }
