@@ -91,10 +91,16 @@ class SampleRasterJob(args: Args) extends Job(args) {
 
   // Working Grayscale code
  val a =   AccumuloSource(options)
-    .mapTo('line) {
+    .mapTo[Array[Int]]('hist) {
       (kv: (Key, Value)) => {
-        s"foo ${HistogramJob.kvToHistogram(kv._1, kv._2).mkString(",")}"
+        HistogramJob.kvToHistogram(kv._1, kv._2)
+      }
+  }.groupAll {
+    _.reduce[Array[Int]]('hist -> 'totalHist) {
+      (h1: Array[Int], h2: Array[Int]) => HistogramJob.addBins(h1, h2)
     }
+  }.mapTo[Array[Int], String]('totalHist -> 'line) {
+    (array: Array[Int]) => s"Histogram = Array(${array.mkString(",")})"
   }.write(TextLine("hdfs://dhead:54310/tmp/jnh-test/output/histogram"))
 
 //    .groupAll { _.reduce[Array[Int]]('hist -> 'totHist) {
