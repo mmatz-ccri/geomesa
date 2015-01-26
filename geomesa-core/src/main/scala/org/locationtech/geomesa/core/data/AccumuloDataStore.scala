@@ -480,13 +480,13 @@ class AccumuloDataStore(val connector: Connector,
    */
   def delete() = {
     val indexTables =
-      getTypeNames.flatMap{ t =>
+      getTypeNames.flatMap { t =>
         Seq(getSpatioTemporalIdxTableName(t),
             getAttrIdxTableName(t),
             getRecordTableForType(t))
         }.distinct
 
-    // Delete index tables first then catalog table
+    // Delete index tables first then catalog table in case of error
     indexTables.filter(tableOps.exists).foreach(tableOps.delete)
     tableOps.delete(catalogTable)
   }

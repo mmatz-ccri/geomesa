@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Commonwealth Computer Research, Inc.
+ * Copyright 2015 Commonwealth Computer Research, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import org.locationtech.geomesa.tools.commands.DeleteFeatureCommand.DeleteFeatur
 import scala.util.{Failure, Success, Try}
 
 class DeleteFeatureCommand(parent: JCommander) extends CommandWithCatalog(parent) with Logging {
-  override val command = "delete-feature"
+  override val command = "deletefeature"
   override val params = new DeleteFeatureParams
 
   override def execute() = {

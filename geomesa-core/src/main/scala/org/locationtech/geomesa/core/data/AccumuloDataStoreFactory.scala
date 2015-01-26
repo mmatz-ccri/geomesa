@@ -215,12 +215,14 @@ object AccumuloDataStoreFactory {
     }
   }
 
-  def catalogExists(params: JMap[String,Serializable], useMock: Boolean): Boolean = {
-    buildAccumuloConnector(params, useMock)
-      ._1
+  /**
+   * Return true/false whether or not the catalog referenced by these params exists
+   * already (aka the accumulo table has been created)
+   */
+  def catalogExists(params: JMap[String,Serializable], useMock: Boolean): Boolean =
+    buildAccumuloConnector(params, useMock)._1
       .tableOperations()
       .exists(tableNameParam.lookUp(params).asInstanceOf[String])
-  }
 
   def configureJob(job: Job, params: JMap[String, Serializable]): Job = {
     val conf = job.getConfiguration

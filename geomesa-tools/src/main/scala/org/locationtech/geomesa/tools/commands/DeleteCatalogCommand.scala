@@ -20,7 +20,7 @@ import com.typesafe.scalalogging.slf4j.Logging
 import org.locationtech.geomesa.tools.commands.DeleteCatalogCommand._
 
 class DeleteCatalogCommand (parent: JCommander) extends CommandWithCatalog(parent) with Logging {
-  override val command = "delete-catalog"
+  override val command = "deletecatalog"
   override val params = new DeleteCatalogParams
 
   override def execute() = {

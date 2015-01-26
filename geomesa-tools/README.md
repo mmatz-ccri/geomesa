@@ -153,12 +153,12 @@ To create a new feature on a specified catalog table, use the `create` command.
 #### Example command:
     geomesa create -u username -p password -c test_create -i instname -z zoo1,zoo2,zoo3 -fn testing -s fid:String:index=true,dtg:Date,geom:Point:srid=4326 -dt dtg
 
-### delete-feature
-To delete a feature on a specified catalog table, use the `delete-feature` command.
+### deletefeature
+To delete a feature on a specified catalog table, use the `deletefeature` command.
 
 ####Usage (required options denoted with star):
-    $ geomesa help delete-feature
-    Usage: delete-feature [options]
+    $ geomesa help deletefeature
+    Usage: deletefeature [options]
       Options:
         -a, --auths
            Accumulo authorizations
@@ -189,16 +189,16 @@ To delete a feature on a specified catalog table, use the `delete-feature` comma
 
     
 ####Example:
-    geomesa delete-feature -u username -p password -i instname -z zoo1,zoo2,zoo3 -c test_catalog -fn testfeature1
-    geomesa delete-feature -u username -p password -i instname -z zoo1,zoo2,zoo3 -c test_catalog -pt 'testfeatures\d+'
+    geomesa deletefeature -u username -p password -i instname -z zoo1,zoo2,zoo3 -c test_catalog -fn testfeature1
+    geomesa deletefeature -u username -p password -i instname -z zoo1,zoo2,zoo3 -c test_catalog -pt 'testfeatures\d+'
 
-### delete-catalog
-To delete a GeoMesa catalog completely (and all features in it) use the `delete-catalog` command.
+### deletecatalog
+To delete a GeoMesa catalog completely (and all features in it) use the `deletecatalog` command.
 
 ####Usage (required options denoted with star):
-    geomesa help delete-catalog
+    geomesa help deletecatalog
     Delete a GeoMesa catalog completely (and all features in it)
-    Usage: delete-catalog [options]
+    Usage: deletecatalog [options]
       Options:
         -a, --auths
            Accumulo authorizations
@@ -223,7 +223,7 @@ To delete a GeoMesa catalog completely (and all features in it) use the `delete-
            Zookeepers (host[:port], comma separated)
     
 ####Example:
-    geomesa delete-catalog -u username -p password -i instname -z zoo1,zoo2,zoo3 -c test_catalog
+    geomesa deletecatalog -u username -p password -i instname -z zoo1,zoo2,zoo3 -c test_catalog
     
 ### describe
 To describe the attributes of a feature on a specified catalog table, use the `describe` command.  

@@ -16,8 +16,8 @@
 package org.locationtech.geomesa.tools
 
 import org.geotools.data.DataStoreFinder
-import org.locationtech.geomesa.core.data.{AccumuloDataStoreFactory, AccumuloDataStore}
 import org.locationtech.geomesa.core.data.AccumuloDataStoreFactory.{params => dsParams}
+import org.locationtech.geomesa.core.data.{AccumuloDataStore, AccumuloDataStoreFactory}
 import org.locationtech.geomesa.tools.commands.GeoMesaParams
 
 import scala.collection.JavaConversions._
@@ -41,14 +41,14 @@ class DataStoreHelper(params: GeoMesaParams) extends AccumuloProperties {
    * Create a new catalog table in geomesa if one does not already exist
    * @throws an Exception if the catalog already exists
    */
-  def createNewDataStore: AccumuloDataStore =
+  def createNewDataStore(): AccumuloDataStore =
     if (catalogExists) {
       throw new Exception(s"Catalog already exists: ${params.catalog}")
     } else {
-      getDataStore
+      getDataStore()
     }
   
-  private def getDataStore: AccumuloDataStore =
+  private def getDataStore(): AccumuloDataStore =
     Try({ DataStoreFinder.getDataStore(paramMap).asInstanceOf[AccumuloDataStore] }) match {
       case Success(value) => value
       case Failure(ex)    =>
@@ -60,22 +60,22 @@ class DataStoreHelper(params: GeoMesaParams) extends AccumuloProperties {
    * Test whether or not the catalog already exists
    * @return
    */
-  def catalogExists = 
+  def catalogExists() =
     AccumuloDataStoreFactory.catalogExists(paramMap, params.useMock.toString.toBoolean)
 
   /**
    * Returns a data store for this catalog or creates one if it does not exist
    * @return
    */
-  def getOrCreateDs = if (!catalogExists) createNewDataStore else getDataStore
+  def getOrCreateDs() = if (!catalogExists) createNewDataStore() else getDataStore()
 
   /**
    * Get a handle to a datastore for a pre-existing catalog table
    * @throws an Exception if the catalog table does not exist in accumulo
    */
-  def getExistingStore =
+  def getExistingStore() =
     if (catalogExists) {
-      getDataStore
+      getDataStore()
     } else {
       throw new Exception(s"Catalog does not exist: ${params.catalog}")
     }
