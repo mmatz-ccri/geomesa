@@ -17,8 +17,10 @@
 
 package org.locationtech.geomesa.raster.data
 
+import com.google.common.collect.ImmutableSetMultimap
 import com.typesafe.scalalogging.slf4j.Logging
 import org.apache.accumulo.core.client.IteratorSetting
+import org.apache.accumulo.core.data.{Range => ARange}
 import org.apache.hadoop.io.Text
 import org.geotools.factory.CommonFactoryFinder
 import org.geotools.filter.text.ecql.ECQL
@@ -27,37 +29,74 @@ import org.geotools.referencing.crs.DefaultGeographicCRS
 import org.locationtech.geomesa.core._
 import org.locationtech.geomesa.core.index._
 import org.locationtech.geomesa.core.iterators._
+import org.locationtech.geomesa.core.process.knn.TouchingGeoHashes
 import org.locationtech.geomesa.raster._
 import org.locationtech.geomesa.raster.index.RasterIndexSchema
 import org.locationtech.geomesa.raster.iterators.RasterFilteringIterator
-import org.locationtech.geomesa.utils.geohash.{BoundingBox, GeoHash, GeohashUtils}
+import org.locationtech.geomesa.utils.geohash.{BoundingBox, GeohashUtils}
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.opengis.feature.simple.SimpleFeatureType
 import org.opengis.filter.Filter
+
+import scala.collection.JavaConversions._
 
 // TODO: Constructor needs info to create Row Formatter
 // right now the schema is not used
 // TODO: Consider adding resolutions + extent info  https://geomesa.atlassian.net/browse/GEOMESA-645
 case class AccumuloRasterQueryPlanner(schema: RasterIndexSchema) extends Logging with IndexFilterHelpers {
 
-  def getQueryPlan(rq: RasterQuery, availableResolutions: List[Double]): QueryPlan = {
+  def modifyHashRange(hash: String, expectedLen: Int, res: String): ARange = expectedLen match {
+    case 0                                     => new ARange(new Text(s"~$res~"))
+    case lucky if expectedLen == hash.length   => new ARange(new Text(s"~$res~$hash"))
+    case shorten if expectedLen < hash.length  => new ARange(new Text(s"~$res~${hash.substring(0, expectedLen)}"))
+    case lengthen if expectedLen > hash.length => new ARange(new Text(s"~$res~$hash"), new Text(s"~$res~$hash~"))
+  }
 
-    // TODO: WCS: Improve this if possible
-    // ticket is GEOMESA-560
-    // note that this will only go DOWN in GeoHash resolution -- the enumeration will miss any GeoHashes
-    // that perfectly match the bbox or ones that fully contain it.
-    val closestAcceptableGeoHash = GeohashUtils.getClosestAcceptableGeoHash(rq.bbox).getOrElse(GeoHash("")).hash
-    val hashes = (BoundingBox.getGeoHashesFromBoundingBox(rq.bbox) :+ closestAcceptableGeoHash).toSet.toList
-    val res = getLexicodedResolution(rq.resolution, availableResolutions)
-    logger.debug(s"RasterQueryPlanner: BBox: ${rq.bbox} has geohashes: $hashes, and has encoded Resolution: $res")
+  def getQueryPlan(rq: RasterQuery, resAndGeoHashMap: ImmutableSetMultimap[Double, Int]): QueryPlan = {
+    val availableResolutions = resAndGeoHashMap.keys.toList.distinct.sorted
 
-    val rows = hashes.map { gh =>
-      // TODO: leverage the RasterIndexSchema to construct the range.
-      new org.apache.accumulo.core.data.Range(new Text(s"~$res~$gh"))
+    // Step 1. Pick resolution
+    val selectedRes: Double = getResolution(rq.resolution, availableResolutions)
+    val res = lexiEncodeDoubleToString(selectedRes)
+
+    // Step 2. Pick GeoHashLength, this will need to pick the smallest val if a mulitmap
+    val GeoHashLenList = resAndGeoHashMap.get(selectedRes).toList
+    val expectedGeoHashLen = if (GeoHashLenList.isEmpty) {
+      0
+    } else {
+      GeoHashLenList.min
     }
 
+    // Step 3. Given an expected Length and the query pad up or down the CAGH
+    val closestAcceptableGeoHash = GeohashUtils.getClosestAcceptableGeoHash(rq.bbox)
+    val bboxHashes = BoundingBox.getGeoHashesFromBoundingBox(rq.bbox)
+
+    val hashes: List[String] = closestAcceptableGeoHash match {
+      case Some(gh) =>
+        if (rq.bbox.equals(gh.bbox)) {
+          List(gh.hash)
+        } else {
+          val preliminaryhashes = bboxHashes :+ gh.hash
+          if(gh.bbox.covers(rq.bbox)) {
+            preliminaryhashes.distinct
+          } else {
+            val touching = TouchingGeoHashes.touching(gh).map(_.hash)
+            (preliminaryhashes ++ touching).distinct
+          }
+        }
+      case        _ => bboxHashes.toList
+    }
+
+    logger.debug(s"RasterQueryPlanner: BBox: ${rq.bbox} has geohashes: $hashes, and has encoded Resolution: $res")
+
+    val r = hashes.map{ gh => modifyHashRange(gh, expectedGeoHashLen, res) }.distinct
+
+    // of the Ranges enumerated, get the merge of the overlapping Ranges
+    val rows = ARange.mergeOverlapping(r)
+    println(s"Buckshot: Scanning with ranges: $rows")
+
     // setup the RasterFilteringIterator
-    val cfg = new IteratorSetting(9001, "raster-filtering-iterator", classOf[RasterFilteringIterator])
+    val cfg = new IteratorSetting(90, "raster-filtering-iterator", classOf[RasterFilteringIterator])
     configureRasterFilter(cfg, constructFilter(getReferencedEnvelope(rq.bbox), indexSFT))
     configureRasterMetadataFeatureType(cfg, indexSFT)
 
