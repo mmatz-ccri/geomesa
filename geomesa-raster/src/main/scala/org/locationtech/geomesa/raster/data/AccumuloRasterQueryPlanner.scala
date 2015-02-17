@@ -131,8 +131,20 @@ case class AccumuloRasterQueryPlanner(schema: RasterIndexSchema) extends Logging
 
   def constructFilter(ref: ReferencedEnvelope, featureType: SimpleFeatureType): Filter = {
     val ff = CommonFactoryFinder.getFilterFactory2
-    val b = ff.bbox(ff.property(featureType.getGeometryDescriptor.getLocalName), ref)
-    b.asInstanceOf[Filter]
+
+    // JNH: NOT TOUCHING!
+    // TODO: Clean this up.
+    val bboxf = ff.bbox(ff.property(featureType.getGeometryDescriptor.getLocalName), ref)
+
+    val geom = BoundingBox(ref).geom
+
+    val wktwriter = new com.vividsolutions.jts.io.WKTWriter
+    val wkt = wktwriter.write(geom)
+
+    val fString = s"INTERSECTS(${featureType.getGeometryDescriptor.getLocalName}, $wkt) AND " +
+      s"NOT TOUCHES(${featureType.getGeometryDescriptor.getLocalName}, $wkt) "
+
+    ECQL.toFilter(fString)
   }
 
   def configureRasterFilter(cfg: IteratorSetting, filter: Filter) = {

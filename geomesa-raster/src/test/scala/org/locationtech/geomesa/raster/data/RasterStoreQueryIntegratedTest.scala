@@ -256,7 +256,7 @@ class RasterStoreQueryIntegratedTest extends Specification {
       rasterStore must beAnInstanceOf[RasterStore]
       val theResults = rasterStore.getRasters(query).toList
       theResults.length must beEqualTo(1)
-    }.pendingUntilFixed
+    }
 
     "Properly return one raster in a QLevel 2 bounding box" in {
       val tableName = getNewIteration()
@@ -272,7 +272,7 @@ class RasterStoreQueryIntegratedTest extends Specification {
       rasterStore must beAnInstanceOf[RasterStore]
       val theResults = rasterStore.getRasters(query).toList
       theResults.length must beEqualTo(1)
-    }.pendingUntilFixed
+    }
 
     "Properly return one raster in a QLevel 3 bounding box" in {
       val tableName = getNewIteration()
