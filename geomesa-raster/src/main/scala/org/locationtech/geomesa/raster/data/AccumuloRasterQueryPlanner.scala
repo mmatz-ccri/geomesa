@@ -46,6 +46,7 @@ import scala.collection.JavaConversions._
 case class AccumuloRasterQueryPlanner(schema: RasterIndexSchema) extends Logging with IndexFilterHelpers {
 
   def modifyHashRange(hash: String, expectedLen: Int, res: String): ARange = expectedLen match {
+    // JNH: Think about 0-bit GH some more.
     case 0                                     => new ARange(new Text(s"~$res~"))
     case lucky if expectedLen == hash.length   => new ARange(new Text(s"~$res~$hash"))
     case shorten if expectedLen < hash.length  => new ARange(new Text(s"~$res~${hash.substring(0, expectedLen)}"))
@@ -56,6 +57,8 @@ case class AccumuloRasterQueryPlanner(schema: RasterIndexSchema) extends Logging
     val availableResolutions = resAndGeoHashMap.keys.toList.distinct.sorted
 
     // Step 1. Pick resolution
+
+    // JNH: rename getResolution to selectResolution?
     val selectedRes: Double = getResolution(rq.resolution, availableResolutions)
     val res = lexiEncodeDoubleToString(selectedRes)
 
@@ -67,7 +70,7 @@ case class AccumuloRasterQueryPlanner(schema: RasterIndexSchema) extends Logging
       GeoHashLenList.min
     }
 
-    // Step 3. Given an expected Length and the query pad up or down the CAGH
+    // Step 3. Given an expected Length and the query, pad up or down the CAGH
     val closestAcceptableGeoHash = GeohashUtils.getClosestAcceptableGeoHash(rq.bbox)
     val bboxHashes = BoundingBox.getGeoHashesFromBoundingBox(rq.bbox)
 
@@ -89,11 +92,11 @@ case class AccumuloRasterQueryPlanner(schema: RasterIndexSchema) extends Logging
 
     logger.debug(s"RasterQueryPlanner: BBox: ${rq.bbox} has geohashes: $hashes, and has encoded Resolution: $res")
 
-    val r = hashes.map{ gh => modifyHashRange(gh, expectedGeoHashLen, res) }.distinct
+    val r = hashes.map { gh => modifyHashRange(gh, expectedGeoHashLen, res) }.distinct
 
     // of the Ranges enumerated, get the merge of the overlapping Ranges
     val rows = ARange.mergeOverlapping(r)
-    println(s"Buckshot: Scanning with ranges: $rows")
+    println(s"Scanning with ranges: $rows")
 
     // setup the RasterFilteringIterator
     val cfg = new IteratorSetting(90, "raster-filtering-iterator", classOf[RasterFilteringIterator])
