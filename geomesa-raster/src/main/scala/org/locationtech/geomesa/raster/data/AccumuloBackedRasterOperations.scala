@@ -18,7 +18,9 @@ package org.locationtech.geomesa.raster.data
 
 import java.awt.image.BufferedImage
 import java.util.Map.Entry
+import java.util.concurrent.{TimeUnit, Callable}
 
+import com.google.common.cache.{CacheBuilder, Cache}
 import com.google.common.collect.ImmutableSetMultimap
 import org.apache.accumulo.core.client.{BatchWriterConfig, Connector, TableExistsException}
 import org.apache.accumulo.core.data.{Key, Mutation, Range, Value}
@@ -181,16 +183,21 @@ class AccumuloBackedRasterOperations(val connector: Connector,
   }
 
   def getResolutionAndGeoHashLengthMap(): ImmutableSetMultimap[Double, Int] = {
-    //TODO: This needs to be a MultiMap
-    ensureTableExists(GEOMESA_RASTER_BOUNDS_TABLE)
-    val scanner = connector.createScanner(GEOMESA_RASTER_BOUNDS_TABLE, getAuths())
-    scanner.setRange(new Range(getBoundsRowID))
-    val scanResultingKeys = SelfClosingScanner(scanner).map(_.getKey).toSeq
-    val geohashlens = scanResultingKeys.map(_.getColumnFamily.toString).map(lexiDecodeStringToInt)
-    val resolutions = scanResultingKeys.map(_.getColumnQualifier.toString).map(lexiDecodeStringToDouble)
-    val m = new ImmutableSetMultimap.Builder[Double, Int]()
-    (resolutions zip geohashlens).foreach(x => m.put(x._1, x._2))
-    m.build()
+    AccumuloBackedRasterOperations.boundsCache.get(rasterTable, callable)
+  }
+
+  def callable = new Callable[ImmutableSetMultimap[Double, Int]] {
+    override def call(): ImmutableSetMultimap[Double, Int] = {
+      ensureTableExists(GEOMESA_RASTER_BOUNDS_TABLE)
+      val scanner = connector.createScanner(GEOMESA_RASTER_BOUNDS_TABLE, getAuths())
+      scanner.setRange(new Range(getBoundsRowID))
+      val scanResultingKeys = SelfClosingScanner(scanner).map(_.getKey).toSeq
+      val geohashlens = scanResultingKeys.map(_.getColumnFamily.toString).map(lexiDecodeStringToInt)
+      val resolutions = scanResultingKeys.map(_.getColumnQualifier.toString).map(lexiDecodeStringToDouble)
+      val m = new ImmutableSetMultimap.Builder[Double, Int]()
+      (resolutions zip geohashlens).foreach(x => m.put(x._1, x._2))
+      m.build()
+    }
   }
 
   def getGridRange(): GridEnvelope2D = {
@@ -318,6 +325,12 @@ object AccumuloBackedRasterOperations {
                                          writeMemoryConfig,
                                          writeThreadsConfig,
                                          queryThreadsConfig)
+
+  val boundsCache =
+    CacheBuilder.newBuilder()
+      .expireAfterAccess(10, TimeUnit.MINUTES)
+      .expireAfterWrite(10, TimeUnit.MINUTES)
+      .build[String, ImmutableSetMultimap[Double, Int]]
 }
 
 object RasterTableConfig {
