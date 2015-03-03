@@ -39,6 +39,7 @@ object Runner extends Logging {
       new IngestCommand(jc),
       new CreateCommand(jc),
       new ExplainCommand(jc),
+      new MetadataCommand(jc),
       new HelpCommand(jc)
     )
 

@@ -45,6 +45,7 @@ trait GeoMesaMetadata {
   def expireCache(featureName: String)
 
   def getFeatureTypes: Array[String]
+  def getAll(featureName: String): Map[String, String]
 }
 
 class AccumuloBackedMetadata(connector: Connector,
@@ -209,6 +210,12 @@ class AccumuloBackedMetadata(connector: Connector,
       def next() = src.next().getKey.getRow.toString
     }
     resultItr.toArray.map(getFeatureNameFromMetadataRowKey)
+  }
+
+  override def getAll(featureName: String): Map[String, String] = {
+    val scanner = createCatalogScanner
+    scanner.setRange(new Range(getMetadataRowKey(featureName)))
+    SelfClosingIterator(scanner).map(e => e.getKey.getColumnFamily.toString -> e.getValue.toString).toMap
   }
 
   /**

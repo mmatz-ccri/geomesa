@@ -878,6 +878,8 @@ class AccumuloDataStore(val connector: Connector,
   private def getFeatureName(featureType: SimpleFeatureType) = featureType.getName.getLocalPart
 
   override def strategyHints(sft: SimpleFeatureType) = new UserDataStrategyHints()
+
+  def getMetadataMap(sftName: String) = metadata.getAll(sftName)
 }
 
 object AccumuloDataStore {
