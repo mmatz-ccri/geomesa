@@ -122,7 +122,7 @@ object SimpleFeatureTypes {
           ad.getLocalName,
           ad.getType.getBinding,
           ad.getIndexCoverage(),
-          ad.getIndexValue(),
+          ad.isIndexValue(),
           ad.getCardinality()
         )
 
