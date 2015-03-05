@@ -71,6 +71,9 @@
         <fork.mode>once</fork.mode>
         <avro.version>1.7.5</avro.version>
         <accumuloSuffix>accumulo1.5</accumuloSuffix>
+
+        <!-- sonar -->
+        <sonar.language>scala</sonar.language>
     </properties>
 
     <profiles>
@@ -868,6 +871,7 @@
     </dependencyManagement>
 
     <build>
+        <sourceDirectory>src/main/scala</sourceDirectory>
         <testResources>
             <testResource>
                 <directory>src/test/resources</directory>
