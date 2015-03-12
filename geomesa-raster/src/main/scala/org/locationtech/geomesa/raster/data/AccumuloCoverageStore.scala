@@ -64,6 +64,8 @@ class AccumuloCoverageStore(val rasterStore: RasterStore,
 
   def getTable = rasterStore.getTable
 
+  def getRasters: Iterator[Raster] = rasterStore.getRasters
+
   def getRasters(rasterQuery: RasterQuery): Iterator[Raster] = rasterStore.getRasters(rasterQuery)
 
   def saveRaster(raster: Raster) = rasterStore.putRaster(raster)

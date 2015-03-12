@@ -41,10 +41,12 @@ class RasterStore(val rasterOps: RasterOperations) {
 
   def getConnector = rasterOps.getConnector()
 
-  def getTable = rasterOps.getTable
+  def getTable = rasterOps.getTable()
 
   def getMosaicedRaster(rasterQuery: RasterQuery, params: GeoMesaCoverageQueryParams): BufferedImage =
     rasterOps.getMosaicedRaster(rasterQuery, params)
+
+  def getRasters = rasterOps.getRasters()
 
   def getRasters(rasterQuery: RasterQuery): Iterator[Raster] = rasterOps.getRasters(rasterQuery)
 
@@ -52,15 +54,19 @@ class RasterStore(val rasterOps: RasterOperations) {
 
   def putRaster(raster: Raster) = rasterOps.putRaster(raster)
 
-  def getBounds(): BoundingBox = rasterOps.getBounds()
+  def getBounds: BoundingBox = rasterOps.getBounds()
 
-  def getAvailableResolutions(): Seq[Double] = rasterOps.getAvailableResolutions()
+  def getAvailableResolutions: Seq[Double] = rasterOps.getAvailableResolutions()
 
+<<<<<<< HEAD
   def getAvailableGeoHashLengths(): Seq[Int] = rasterOps.getAvailableGeoHashLengths()
   
   def getAvailabilityMap(): ImmutableSetMultimap[Double, Int] = rasterOps.getResolutionAndGeoHashLengthMap()
 
   def getGridRange(): GridEnvelope2D = rasterOps.getGridRange()
+=======
+  def getGridRange: GridEnvelope2D = rasterOps.getGridRange()
+>>>>>>> wip_rastermr
 }
 
 object RasterStore {

@@ -47,6 +47,7 @@ trait RasterOperations extends StrategyHelpers {
   def getAuths(): Authorizations
   def getVisibility(): String
   def getConnector(): Connector
+  def getRasters(): Iterator[Raster]
   def getRasters(rasterQuery: RasterQuery): Iterator[Raster]
   def getQueryRecords(numRecords: Int): Iterator[String]
   def putRaster(raster: Raster): Unit
@@ -138,7 +139,13 @@ class AccumuloBackedRasterOperations(val connector: Connector,
     image
   }
 
+<<<<<<< HEAD
   def getRastersWithTiming(rasterQuery: RasterQuery)(implicit timings: TimingsImpl): Iterator[Raster] = {
+=======
+  def getRasters() = getRasters(AllRasterQuery)
+
+  def getRasters(rasterQuery: RasterQuery): Iterator[Raster] = {
+>>>>>>> wip_rastermr
     profile("scanning") {
       val batchScanner = connector.createBatchScanner(rasterTable, authorizationsProvider.getAuthorizations, numQThreads)
       val plan = profile(queryPlanner.getQueryPlan(rasterQuery, getResolutionAndGeoHashLengthMap), "planning")

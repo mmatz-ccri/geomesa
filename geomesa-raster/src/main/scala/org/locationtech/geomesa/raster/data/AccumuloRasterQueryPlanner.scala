@@ -55,6 +55,7 @@ case class AccumuloRasterQueryPlanner(schema: RasterIndexSchema) extends Logging
   def getQueryPlan(rq: RasterQuery, resAndGeoHashMap: ImmutableSetMultimap[Double, Int]): QueryPlan = {
     val availableResolutions = resAndGeoHashMap.keys.toList.distinct.sorted
 
+<<<<<<< HEAD
     // Step 1. Pick resolution
 
     val selectedRes: Double = selectResolution(rq.resolution, availableResolutions)
@@ -67,6 +68,24 @@ case class AccumuloRasterQueryPlanner(schema: RasterIndexSchema) extends Logging
     } else {
       GeoHashLenList.max
     }
+=======
+    rq match {
+      case bbres: BBOXResolutionRasterQuery => getBBOXResolutionQueryPlan(bbres)
+      case AllRasterQuery => QueryPlan.fullTableScan
+    }
+  }
+
+  def getBBOXResolutionQueryPlan(rq: BBOXResolutionRasterQuery): QueryPlan = {
+
+    // TODO: WCS: Improve this if possible
+    // ticket is GEOMESA-560
+    // note that this will only go DOWN in GeoHash resolution -- the enumeration will miss any GeoHashes
+    // that perfectly match the bbox or ones that fully contain it.
+    val closestAcceptableGeoHash = GeohashUtils.getClosestAcceptableGeoHash(rq.bbox).getOrElse(GeoHash("")).hash
+    val hashes = (BoundingBox.getGeoHashesFromBoundingBox(rq.bbox) :+ closestAcceptableGeoHash).toSet.toList
+    val res = lexiEncodeDoubleToString(rq.resolution)
+    logger.debug(s"Planner: BBox: ${rq.bbox} has geohashes: $hashes, and has encoded Resolution: $res")
+>>>>>>> wip_rastermr
 
     // Step 3. Given an expected Length and the query, pad up or down the CAGH
     val closestAcceptableGeoHash = GeohashUtils.getClosestAcceptableGeoHash(rq.bbox)

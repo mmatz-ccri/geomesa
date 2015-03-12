@@ -230,12 +230,37 @@ object RasterUtils {
     image
   }
 
+<<<<<<< HEAD
   case class sharedRasterParams(gg: GridGeometry2D, envelope: Envelope) {
     val width = gg.getGridRange2D.getWidth
     val height = gg.getGridRange2D.getHeight
     val resX = (envelope.getMaximum(0) - envelope.getMinimum(0)) / width
     val resY = (envelope.getMaximum(1) - envelope.getMinimum(1)) / height
     val suggestedQueryResolution = math.min(resX, resY)
+=======
+  def imageToCoverage(img: WritableRaster, env: ReferencedEnvelope, cf: GridCoverageFactory) = {
+    cf.create("testRaster", img, env)
+  }
+
+  def createRasterStore(tableName: String) = {
+    val rs = RasterStore("user", "pass", "testInstance", "zk", tableName, "SUSA", "SUSA", true)
+    rs
+  }
+
+  def generateQuery(minX: Double, maxX: Double, minY: Double, maxY: Double, res: Double = 10.0) = {
+    val bb = BoundingBox(new ReferencedEnvelope(minX, maxX, minY, maxY, DefaultGeographicCRS.WGS84))
+    RasterQuery(bb, res, None, None)
+  }
+
+  def generateTestRaster(minX: Double, maxX: Double, minY: Double, maxY: Double, w: Int = 256, h: Int = 256, res: Double = 10.0): Raster = {
+    val ingestTime = new DateTime()
+    val env = new ReferencedEnvelope(minX, maxX, minY, maxY, DefaultGeographicCRS.WGS84)
+    val bbox = BoundingBox(env)
+    val metadata = DecodedIndex(Raster.getRasterId("testRaster"), bbox.geom, Option(ingestTime.getMillis))
+    val image = getNewImage(w, h, Array[Int](255, 255, 255))
+    val coverage = imageToCoverage(image.getRaster, env, defaultGridCoverageFactory)
+    Raster(coverage.getRenderedImage, metadata, res)
+>>>>>>> wip_rastermr
   }
 
   def getSequenceFileWriter(outFile: String, conf: Configuration): SequenceFile.Writer = {
