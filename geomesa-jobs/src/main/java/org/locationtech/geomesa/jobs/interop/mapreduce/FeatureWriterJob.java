@@ -17,23 +17,30 @@
 package org.locationtech.geomesa.jobs.interop.mapreduce;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.geotools.filter.identity.FeatureIdImpl;
+import org.locationtech.geomesa.feature.ScalaSimpleFeature;
+import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes$;
 import org.opengis.feature.simple.SimpleFeature;
+import org.opengis.feature.simple.SimpleFeatureType;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class FeatureCountJob {
+public class FeatureWriterJob {
 
-    public static class MyMapper extends Mapper<Text, SimpleFeature, Text, Text> {
+    public static class MyMapper extends Mapper<Text, SimpleFeature, Text, SimpleFeature> {
 
         static enum CountersEnum { FEATURES }
+
+        Text text = new Text();
+        SimpleFeatureType sft =
+                SimpleFeatureTypes$.MODULE$.createType("test", "dtg:Date,*geom:Point:srid=4326");
+
 
         @Override
         public void map(Text key, SimpleFeature value, Context context)
@@ -41,19 +48,23 @@ public class FeatureCountJob {
             Counter counter = context.getCounter(CountersEnum.class.getName(),
                                                  CountersEnum.FEATURES.toString());
             counter.increment(1);
-            context.write(key, new Text(value.getAttribute("geom").toString()));
+
+            Object[] values = new Object[] { value.getAttribute("dtg"), value.getAttribute("geom") };
+            SimpleFeature feature = new ScalaSimpleFeature(value.getID(), sft, values);
+            context.write(text, feature);
         }
     }
 
     public static void main(String[] args) throws Exception {
         Configuration conf = new Configuration();
-        Job job = Job.getInstance(conf, "simple feature count");
-        job.setJarByClass(FeatureCountJob.class);
+        Job job = Job.getInstance(conf, "simple feature writer");
+
+        job.setJarByClass(FeatureWriterJob.class);
         job.setMapperClass(MyMapper.class);
         job.setInputFormatClass(GeoMesaInputFormat.class);
-        job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(Text.class);
-        FileOutputFormat.setOutputPath(job, new Path("/tmp/emilio"));
+        job.setOutputFormatClass(GeoMesaOutputFormat.class);
+        job.setMapOutputKeyClass(Text.class);
+        job.setMapOutputValueClass(ScalaSimpleFeature.class);
 
         Map<String, String> params = new HashMap<String, String>();
         params.put("instanceId", "");
@@ -65,7 +76,11 @@ public class FeatureCountJob {
         String cql = "BBOX(geom, -165,5,-50,75) AND dtg DURING 2015-03-02T00:00:00.000Z/2015-03-02T23:59:59.999Z";
 
         GeoMesaInputFormat.configure(job, params, "feat", cql);
+        GeoMesaOutputFormat.configureDataStore(job, params);
 
+        job.getConfiguration().set("io.serializations",
+                "org.apache.hadoop.io.serializer.WritableSerialization," +
+                "org.locationtech.geomesa.jobs.mapreduce.SimpleFeatureSerialization");
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 }

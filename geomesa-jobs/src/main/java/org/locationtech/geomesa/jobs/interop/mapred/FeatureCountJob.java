@@ -64,15 +64,15 @@ public class FeatureCountJob {
         FileOutputFormat.setOutputPath(conf, new Path("/tmp/emilio"));
 
         java.util.Map<String, String> params = new HashMap<String, String>();
-        params.put("instanceId", "pcloud2");
-        params.put("zookeepers", "pzoo2,pzoo1,pzoo3");
-        params.put("user", "root");
-        params.put("password", "secret");
-        params.put("tableName", "fr_catalog");
+        params.put("instanceId", "");
+        params.put("zookeepers", "");
+        params.put("user", "");
+        params.put("password", "");
+        params.put("tableName", "");
 
         String cql = "BBOX(geom, -165,5,-50,75) AND dtg DURING 2015-03-02T00:00:00.000Z/2015-03-02T23:59:59.999Z";
 
-        GeoMesaInputFormat.configure(conf, params, "fr", cql);
+        GeoMesaInputFormat.configure(conf, params, "feat", cql);
         JobClient.runJob(conf);
     }
 }
