@@ -123,7 +123,7 @@ class QueryPlanner(sft: SimpleFeatureType,
     // Decode according to the SFT return type.
     // if this is a density query, expand the map
     if (query.getHints.containsKey(DENSITY_KEY)) {
-      adaptDensityIterator(accumuloIterator, decoder)
+      adaptStandardIterator(accumuloIterator, query, decoder)   // JNH: Quick try.
     } else if (query.getHints.containsKey(TEMPORAL_DENSITY_KEY)) {
       adaptTemporalIterator(accumuloIterator, returnSFT, decoder)
     } else if (query.getHints.containsKey(MAP_AGGREGATION_KEY)) {
