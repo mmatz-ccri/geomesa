@@ -68,13 +68,15 @@ class DensityProcess extends HeatmapProcess {
                        @DescribeParameter(name = "outputHeight", description = "Height of output raster in pixels") argOutputHeight: Integer,
                        monitor: ProgressListener): GridCoverage2D = {
 
-    val pixelsPerCell: Int = if (argPixelsPerCell != null && argPixelsPerCell > 1) argPixelsPerCell
+    val pixelsPerCell: Int = if (argPixelsPerCell != null && argPixelsPerCell > 1) argPixelsPerCell.toInt
     else 1
-    val outputWidth = argOutputWidth.toInt
-    val outputHeight = argOutputHeight.toInt
+    val outputWidth: Int = argOutputWidth.toInt
+    val outputHeight: Int = argOutputHeight.toInt
 
-    val (gridWidth: Int, gridHeight: Int) = if (pixelsPerCell > 1) (outputWidth / pixelsPerCell, outputHeight/ pixelsPerCell)
-
+    println("Here")
+    val (gridWidth: Int, gridHeight: Int) =
+      if (pixelsPerCell > 1) (outputWidth / pixelsPerCell, outputHeight/ pixelsPerCell)
+      else (outputWidth, outputHeight)
     // TODO: Correctly handle transformations
     //    val srcCRS = obsFeatures.getSchema.getCoordinateReferenceSystem
     //    val dstCRS = argOutputEnv.getCoordinateReferenceSystem
