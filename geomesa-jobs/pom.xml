@@ -153,6 +153,7 @@
                                     <goal>shade</goal>
                                 </goals>
                                 <configuration>
+                                    <shadedArtifactAttached>true</shadedArtifactAttached>
                                     <createDependencyReducedPom>false</createDependencyReducedPom>
                                     <artifactSet>
                                         <includes>
