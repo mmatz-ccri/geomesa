@@ -2,6 +2,7 @@ package org.locationtech.geomesa.web.security
 
 import com.google.common.collect.Maps
 import org.apache.accumulo.core.security.{Authorizations, ColumnVisibility, VisibilityEvaluator}
+import org.geoserver.catalog.Catalog
 import org.geoserver.security.WrapperPolicy
 import org.geoserver.security.decorators.{DecoratingFeatureSource, DefaultSecureDataFactory}
 import org.geotools.data._
@@ -13,15 +14,19 @@ import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 import org.opengis.filter.{Filter, FilterVisitor}
 import org.springframework.security.core.context.SecurityContextHolder
 
-class GMSecuredDataFactory extends DefaultSecureDataFactory {
+class GMSecureDataFactory(val catalog: Catalog) extends DefaultSecureDataFactory {
 
   override def secure(o: scala.Any, policy: WrapperPolicy): AnyRef =
     super.secure(o, policy) match {
       case ds: DataStore =>
-        new GMSecureDataStore(ds)
+        if(GMSecureDataFactory.isGeoMesaSecure(ds.getInfo.getKeywords))
+          new GMSecureDataStore(ds)
+        else ds
 
       case fs: FeatureSource[SimpleFeatureType, SimpleFeature] =>
-        new GMSecureFeatureSource(fs)
+        if(GMSecureDataFactory.isGeoMesaSecure(fs.getInfo.getKeywords))
+          new GMSecureFeatureSource(fs)
+        else fs
 
       case fc: SimpleFeatureCollection =>
         new GMSecureFeatureCollection(fc)
@@ -34,8 +39,12 @@ class GMSecuredDataFactory extends DefaultSecureDataFactory {
   override def getPriority: Int = 1
 }
 
-object GMSecuredDataFactory {
+object GMSecureDataFactory {
   import scala.collection.JavaConversions._
+
+  final val GEOMESA_SECURITY_MARKING = "geomesa.secure"
+
+  def isGeoMesaSecure(keywords: java.util.Set[String]) = Option(keywords).exists(_.contains(GEOMESA_SECURITY_MARKING))
 
   def getAuthorizations: Authorizations = {
     val auths = SecurityContextHolder.getContext.getAuthentication.getAuthorities.map(_.getAuthority).toList
@@ -50,7 +59,7 @@ class GMSecureFeatureSource(delegate: FeatureSource[SimpleFeatureType, SimpleFea
   extends DecoratingFeatureSource[SimpleFeatureType, SimpleFeature](delegate) {
 
   override def getFeatures(query: Query): FeatureCollection[SimpleFeatureType, SimpleFeature] = {
-    val filter = new VisibilityFilter(GMSecuredDataFactory.buildVisibilityEvaluator())
+    val filter = new VisibilityFilter(GMSecureDataFactory.buildVisibilityEvaluator())
     new FilteringSimpleFeatureCollection(delegate.getFeatures(query), filter)
   }
 }
@@ -59,7 +68,7 @@ class GMSecureFeatureCollection(delegate: SimpleFeatureCollection) extends Defau
   override def features(): SimpleFeatureIterator =
     new FilteringSimpleFeatureIterator(
       super.features(),
-      new VisibilityFilter(GMSecuredDataFactory.buildVisibilityEvaluator()))
+      new VisibilityFilter(GMSecureDataFactory.buildVisibilityEvaluator()))
 }
 
 class GMSecureDataStore(delegate: DataStore) extends AbstractDataStore {
@@ -71,7 +80,7 @@ class GMSecureDataStore(delegate: DataStore) extends AbstractDataStore {
 
   override def getFeatureReader(query: Query, transaction: Transaction): FeatureReader[SimpleFeatureType, SimpleFeature] = {
     val delegateReader = delegate.getFeatureReader(query, transaction)
-    val filter = new VisibilityFilter(GMSecuredDataFactory.buildVisibilityEvaluator())
+    val filter = new VisibilityFilter(GMSecureDataFactory.buildVisibilityEvaluator())
     new FilteringFeatureReader[SimpleFeatureType, SimpleFeature](delegateReader, filter)
   }
 

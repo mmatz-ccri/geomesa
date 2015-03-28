@@ -28,7 +28,7 @@ class GMSecureFeaturesTest extends Specification {
 
   "GMSecuredDataFactory" should {
 
-    val gmsdf = new GMSecuredDataFactory
+    val gmsdf = new GMSecureDataFactory
 
     "be able to secure a DataStore" >> {
       gmsdf.canSecure(classOf[DataStore]) must beTrue

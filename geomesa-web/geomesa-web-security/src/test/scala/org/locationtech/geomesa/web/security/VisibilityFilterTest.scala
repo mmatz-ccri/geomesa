@@ -28,7 +28,7 @@ class VisibilityFilterTest extends Specification {
       ctx.setAuthentication(new TestingAuthenticationToken(null, null, "ADMIN", "USER"))
       SecurityContextHolder.setContext(ctx)
 
-      val vizFilter = new VisibilityFilter(GMSecuredDataFactory.buildVisibilityEvaluator())
+      val vizFilter = new VisibilityFilter(GMSecureDataFactory.buildVisibilityEvaluator())
       vizFilter.evaluate(f) must beTrue
     }
 
@@ -39,7 +39,7 @@ class VisibilityFilterTest extends Specification {
       ctx.setAuthentication(new TestingAuthenticationToken(null, null, "ADMIN", "USER"))
       SecurityContextHolder.setContext(ctx)
 
-      val vizFilter = new VisibilityFilter(GMSecuredDataFactory.buildVisibilityEvaluator())
+      val vizFilter = new VisibilityFilter(GMSecureDataFactory.buildVisibilityEvaluator())
       vizFilter.evaluate(f) must beFalse
     }
 
@@ -51,7 +51,7 @@ class VisibilityFilterTest extends Specification {
       ctx.setAuthentication(new TestingAuthenticationToken(null, null, "ADMIN"))
       SecurityContextHolder.setContext(ctx)
 
-      val vizFilter = new VisibilityFilter(GMSecuredDataFactory.buildVisibilityEvaluator())
+      val vizFilter = new VisibilityFilter(GMSecureDataFactory.buildVisibilityEvaluator())
       vizFilter.evaluate(f) must beFalse
     }
 
@@ -63,7 +63,7 @@ class VisibilityFilterTest extends Specification {
       ctx.setAuthentication(new TestingAuthenticationToken(null, null, "USER"))
       SecurityContextHolder.setContext(ctx)
 
-      val vizFilter = new VisibilityFilter(GMSecuredDataFactory.buildVisibilityEvaluator())
+      val vizFilter = new VisibilityFilter(GMSecureDataFactory.buildVisibilityEvaluator())
       vizFilter.evaluate(f) must beTrue
     }
 
