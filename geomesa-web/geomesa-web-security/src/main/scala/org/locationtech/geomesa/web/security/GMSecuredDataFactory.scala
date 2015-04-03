@@ -1,6 +1,7 @@
 package org.locationtech.geomesa.web.security
 
 import com.google.common.collect.Maps
+import com.typesafe.scalalogging.slf4j.Logging
 import org.apache.accumulo.core.security.{Authorizations, ColumnVisibility, VisibilityEvaluator}
 import org.geoserver.security.WrapperPolicy
 import org.geoserver.security.decorators.{DecoratingFeatureSource, DefaultSecureDataFactory}
@@ -13,7 +14,9 @@ import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 import org.opengis.filter.{Filter, FilterVisitor}
 import org.springframework.security.core.context.SecurityContextHolder
 
-class GMSecuredDataFactory extends DefaultSecureDataFactory {
+class GMSecuredDataFactory extends DefaultSecureDataFactory with Logging {
+
+  logger.info("Using GMSecuredDataFactory")
 
   override def secure(o: scala.Any, policy: WrapperPolicy): AnyRef =
     super.secure(o, policy) match {
@@ -47,7 +50,10 @@ object GMSecuredDataFactory {
 }
 
 class GMSecureFeatureSource(delegate: FeatureSource[SimpleFeatureType, SimpleFeature])
-  extends DecoratingFeatureSource[SimpleFeatureType, SimpleFeature](delegate) {
+  extends DecoratingFeatureSource[SimpleFeatureType, SimpleFeature](delegate)
+  with Logging {
+
+  logger.info("Secured Feature Source '{}'", delegate.getName)
 
   override def getFeatures(query: Query): FeatureCollection[SimpleFeatureType, SimpleFeature] = {
     val filter = new VisibilityFilter(GMSecuredDataFactory.buildVisibilityEvaluator())
@@ -55,14 +61,20 @@ class GMSecureFeatureSource(delegate: FeatureSource[SimpleFeatureType, SimpleFea
   }
 }
 
-class GMSecureFeatureCollection(delegate: SimpleFeatureCollection) extends DefaultFeatureCollection(delegate) {
+class GMSecureFeatureCollection(delegate: SimpleFeatureCollection) extends DefaultFeatureCollection(delegate)
+  with Logging {
+
+  logger.info("Secured Feature Collection '{}'", delegate.getSchema.getName)
+
   override def features(): SimpleFeatureIterator =
     new FilteringSimpleFeatureIterator(
       super.features(),
       new VisibilityFilter(GMSecuredDataFactory.buildVisibilityEvaluator()))
 }
 
-class GMSecureDataStore(delegate: DataStore) extends AbstractDataStore {
+class GMSecureDataStore(delegate: DataStore) extends AbstractDataStore with Logging {
+
+  logger.info("Secured Data Store '{}'", delegate.getInfo.getTitle)
 
   override def getSchema(s: String): SimpleFeatureType = delegate.getSchema(s)
 
