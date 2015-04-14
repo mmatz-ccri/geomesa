@@ -37,6 +37,7 @@
         <module>geomesa-compute</module>
         <module>geomesa-assemble</module>
         <module>geomesa-web</module>
+        <module>geomesa-process</module>
     </modules>
 
     <properties>
@@ -80,12 +81,6 @@
             <properties>
                 <maven.test.jvmargs>-Xms1g -Xmx2g -XX:MaxPermSize=1024m -XX:-UseGCOverheadLimit -Xrunjdwp:transport=dt_socket,address=5005,server=y,suspend=y</maven.test.jvmargs>
             </properties>
-        </profile>
-        <profile>
-            <id>build-minicluster</id>
-            <modules>
-                <module>geomesa-minicluster</module>
-            </modules>
         </profile>
     </profiles>
 
@@ -877,6 +872,31 @@
                 <groupId>com.typesafe</groupId>
                 <artifactId>config</artifactId>
                 <version>1.2.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.locationtech.geomesa</groupId>
+                <artifactId>geomesa-process-accumulo1.5</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.locationtech.geomesa</groupId>
+                <artifactId>geomesa-web-accumulo1.5</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.locationtech.geomesa</groupId>
+                <artifactId>geomesa-web-csv-accumulo1.5</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.locationtech.geomesa</groupId>
+                <artifactId>geomesa-web-data-accumulo1.5</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.locationtech.geomesa</groupId>
+                <artifactId>geomesa-web-core-accumulo1.5</artifactId>
+                <version>${project.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
