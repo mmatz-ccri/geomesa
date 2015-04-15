@@ -2,8 +2,8 @@ package org.locationtech.geomesa.web.security
 
 import org.geotools.filter.identity.FeatureIdImpl
 import org.junit.runner.RunWith
-import org.locationtech.geomesa.core.security.SecurityUtils
 import org.locationtech.geomesa.feature.AvroSimpleFeature
+import org.locationtech.geomesa.utils.geotools.Conversions._
 import org.locationtech.geomesa.utils.geotools.SimpleFeatureTypes
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
@@ -22,7 +22,7 @@ class VisibilityFilterTest extends Specification {
     "work with simple viz" in {
 
       val f = new AvroSimpleFeature(new FeatureIdImpl(""), testSFT)
-      SecurityUtils.setFeatureVisibilities(f, "ADMIN", "USER")
+      f.visibility = "ADMIN&USER"
 
       val ctx = SecurityContextHolder.createEmptyContext()
       ctx.setAuthentication(new TestingAuthenticationToken(null, null, "ADMIN", "USER"))
@@ -45,7 +45,7 @@ class VisibilityFilterTest extends Specification {
 
     "return false when user does not have the right auths" in {
       val f = new AvroSimpleFeature(new FeatureIdImpl(""), testSFT)
-      SecurityUtils.setFeatureVisibilities(f, "ADMIN", "USER")
+      f.visibility = "ADMIN&USER"
 
       val ctx = SecurityContextHolder.createEmptyContext()
       ctx.setAuthentication(new TestingAuthenticationToken(null, null, "ADMIN"))
@@ -57,7 +57,7 @@ class VisibilityFilterTest extends Specification {
 
     "return true when dealing with expressions" in {
       val f = new AvroSimpleFeature(new FeatureIdImpl(""), testSFT)
-      SecurityUtils.setFeatureVisibilities(f, "ADMIN|USER")
+      f.visibility = "ADMIN|USER"
 
       val ctx = SecurityContextHolder.createEmptyContext()
       ctx.setAuthentication(new TestingAuthenticationToken(null, null, "USER"))

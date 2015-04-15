@@ -9,7 +9,7 @@ import org.geotools.data._
 import org.geotools.data.simple.{SimpleFeatureCollection, SimpleFeatureIterator}
 import org.geotools.feature.collection.{FilteringSimpleFeatureCollection, FilteringSimpleFeatureIterator}
 import org.geotools.feature.{DefaultFeatureCollection, FeatureCollection}
-import org.locationtech.geomesa.core.security.SecurityUtils
+import org.locationtech.geomesa.utils.geotools.Conversions._
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 import org.opengis.filter.{Filter, FilterVisitor}
 import org.springframework.security.core.context.SecurityContextHolder
@@ -95,12 +95,9 @@ class VisibilityFilter(ve: VisibilityEvaluator) extends Filter {
   private val vizCache = Maps.newHashMap[String, java.lang.Boolean]()
 
   override def evaluate(o: Any): Boolean = {
-    val viz = SecurityUtils.getVisibility(o.asInstanceOf[SimpleFeature])
-    if(viz != null) {
-      vizCache.getOrElseUpdate(viz, ve.evaluate(new ColumnVisibility(viz)))
-    } else {
-      false
-    }
+    val viz = o.asInstanceOf[SimpleFeature].visibility
+    viz.exists(v =>
+      vizCache.getOrElseUpdate(v, ve.evaluate(new ColumnVisibility(v))))
   }
 
   override def accept(filterVisitor: FilterVisitor, o: AnyRef): AnyRef = o
