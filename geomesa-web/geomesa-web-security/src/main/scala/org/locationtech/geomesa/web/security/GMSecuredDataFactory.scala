@@ -6,10 +6,11 @@ import org.apache.accumulo.core.security.{Authorizations, ColumnVisibility, Visi
 import org.geoserver.security.WrapperPolicy
 import org.geoserver.security.decorators.{DecoratingFeatureSource, DefaultSecureDataFactory}
 import org.geotools.data._
-import org.geotools.data.simple.{SimpleFeatureCollection, SimpleFeatureIterator}
-import org.geotools.feature.collection.{FilteringSimpleFeatureCollection, FilteringSimpleFeatureIterator}
-import org.geotools.feature.{DefaultFeatureCollection, FeatureCollection}
+import org.geotools.data.simple.SimpleFeatureCollection
+import org.geotools.feature.FeatureCollection
+import org.geotools.feature.collection.FilteringSimpleFeatureCollection
 import org.locationtech.geomesa.utils.geotools.Conversions._
+import org.locationtech.geomesa.web.security.GMSecureFeatureCollection.FC
 import org.opengis.feature.simple.{SimpleFeature, SimpleFeatureType}
 import org.opengis.filter.{Filter, FilterVisitor}
 import org.springframework.security.core.context.SecurityContextHolder
@@ -27,7 +28,7 @@ class GMSecuredDataFactory extends DefaultSecureDataFactory with Logging {
         new GMSecureFeatureSource(fs)
 
       case fc: SimpleFeatureCollection =>
-        new GMSecureFeatureCollection(fc)
+        GMSecureFeatureCollection(fc)
 
       case so =>
         so
@@ -56,20 +57,29 @@ class GMSecureFeatureSource(delegate: FeatureSource[SimpleFeatureType, SimpleFea
   logger.info("Secured Feature Source '{}'", delegate.getName)
 
   override def getFeatures(query: Query): FeatureCollection[SimpleFeatureType, SimpleFeature] = {
-    val filter = new VisibilityFilter(GMSecuredDataFactory.buildVisibilityEvaluator())
-    new FilteringSimpleFeatureCollection(delegate.getFeatures(query), filter)
+    GMSecureFeatureCollection(delegate.getFeatures(query))
   }
 }
 
-class GMSecureFeatureCollection(delegate: SimpleFeatureCollection) extends DefaultFeatureCollection(delegate)
+/** This class serves as a marker to avoid double filtering.
+ */
+class GMSecureFeatureCollection(delegate: FC, filter: Filter)
+  extends FilteringSimpleFeatureCollection(delegate, filter)
   with Logging {
 
   logger.info("Secured Feature Collection '{}'", delegate.getSchema.getName)
+}
 
-  override def features(): SimpleFeatureIterator =
-    new FilteringSimpleFeatureIterator(
-      super.features(),
-      new VisibilityFilter(GMSecuredDataFactory.buildVisibilityEvaluator()))
+object GMSecureFeatureCollection {
+
+  type FC = FeatureCollection[SimpleFeatureType, SimpleFeature]
+
+  def apply(delegate: FC): SimpleFeatureCollection = delegate match {
+    case secure: GMSecureFeatureCollection => secure
+    case _ =>
+      val filter = new VisibilityFilter(GMSecuredDataFactory.buildVisibilityEvaluator())
+      new GMSecureFeatureCollection(delegate, filter)
+  }
 }
 
 class GMSecureDataStore(delegate: DataStore) extends AbstractDataStore with Logging {
